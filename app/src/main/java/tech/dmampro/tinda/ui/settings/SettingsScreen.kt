@@ -60,6 +60,7 @@ import tech.dmampro.tinda.util.LocaleHelper
 fun SettingsScreen(
     onBack: () -> Unit,
     onOpenBlocklist: () -> Unit,
+    onOpenDiagnostic: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeId by viewModel.themeId.collectAsState(initial = "lagoon")
@@ -252,6 +253,25 @@ fun SettingsScreen(
                         actionName = swipeLeft,
                         onClick = { gestureSide = true; gesturePicker = SwipeAction.valueOf(swipeLeft) },
                     )
+                }
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenDiagnostic)
+                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_diagnostic),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                        )
+                    }
                 }
                 item {
                     Row(

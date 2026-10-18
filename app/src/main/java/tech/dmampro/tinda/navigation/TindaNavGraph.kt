@@ -11,6 +11,7 @@ import tech.dmampro.tinda.ui.conversation.ConversationDetailScreen
 import tech.dmampro.tinda.ui.conversations.ConversationListScreen
 import tech.dmampro.tinda.ui.newmessage.NewConversationScreen
 import tech.dmampro.tinda.ui.settings.BlocklistScreen
+import tech.dmampro.tinda.ui.settings.DiagnosticScreen
 import tech.dmampro.tinda.ui.settings.SettingsScreen
 
 /**
@@ -72,10 +73,14 @@ fun TindaNavGraph(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenBlocklist = { navController.navigate(Routes.BLOCKLIST) },
+                onOpenDiagnostic = { navController.navigate(Routes.DIAGNOSTIC) },
             )
         }
         composable(Routes.BLOCKLIST) {
             BlocklistScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.DIAGNOSTIC) {
+            DiagnosticScreen(onBack = { navController.popBackStack() })
         }
     }
 }

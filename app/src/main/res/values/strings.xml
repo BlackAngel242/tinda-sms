@@ -69,6 +69,12 @@
     <string name="settings_blocklist">Blocklist</string>
     <string name="settings_blocklist_desc">Blocked numbers and block journal</string>
     <string name="settings_advanced">Advanced options</string>
+    <string name="settings_diagnostic">SMS role diagnostic</string>
+    <string name="diagnostic_title">Diagnostic</string>
+    <string name="diagnostic_desc">Checks that the phone properly sees Tinda\'s 4 SMS components (the ones Android requires for the default SMS app list). Take a screenshot of the result.</string>
+    <string name="diagnostic_loading">Analyzing…</string>
+    <string name="diagnostic_all_ok">All green: the phone sees Tinda correctly. If it still doesn\'t show up in the default SMS apps, the block comes from the system.</string>
+    <string name="diagnostic_not_ok">A component is missing: the problem comes from the app, not the phone.</string>
     <string name="settings_gestures">Swipe gestures</string>
     <string name="settings_swipe_right">Swipe right</string>
     <string name="settings_swipe_left">Swipe left</string>
