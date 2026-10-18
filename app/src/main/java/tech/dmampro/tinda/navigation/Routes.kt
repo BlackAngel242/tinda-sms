@@ -13,6 +13,7 @@ object Routes {
     const val VAULT_HOME = "vault_home"
     const val VAULT_CONVERSATION = "vault_conversation/{address}"
     const val VAULT_RULES = "vault_rules"
+    const val SCHEDULED = "scheduled"
 
     fun conversationDetail(threadId: Long) = "conversation/$threadId"
     fun vaultConversation(address: String) =

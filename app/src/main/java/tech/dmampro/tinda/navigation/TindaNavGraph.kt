@@ -17,6 +17,7 @@ import tech.dmampro.tinda.ui.vault.VaultConversationScreen
 import tech.dmampro.tinda.ui.vault.VaultHomeScreen
 import tech.dmampro.tinda.ui.vault.VaultRulesScreen
 import tech.dmampro.tinda.ui.vault.VaultUnlockScreen
+import tech.dmampro.tinda.ui.schedule.ScheduledListScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -79,6 +80,7 @@ fun TindaNavGraph(
                 onBack = { navController.popBackStack() },
                 onOpenBlocklist = { navController.navigate(Routes.BLOCKLIST) },
                 onOpenDiagnostic = { navController.navigate(Routes.DIAGNOSTIC) },
+                onOpenScheduled = { navController.navigate(Routes.SCHEDULED) },
             )
         }
         composable(Routes.BLOCKLIST) {
@@ -122,6 +124,9 @@ fun TindaNavGraph(
         }
         composable(Routes.VAULT_RULES) {
             VaultRulesScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.SCHEDULED) {
+            ScheduledListScreen(onBack = { navController.popBackStack() })
         }
     }
 }

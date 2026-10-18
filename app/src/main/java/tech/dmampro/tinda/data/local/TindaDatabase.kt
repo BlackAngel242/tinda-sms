@@ -46,6 +46,13 @@ class Converters {
 
     @TypeConverter
     fun stringToStatus(value: String): MessageStatus = MessageStatus.valueOf(value)
+
+    @TypeConverter
+    fun scheduledStatusToString(status: ScheduledStatus): String = status.name
+
+    @TypeConverter
+    fun stringToScheduledStatus(value: String): ScheduledStatus =
+        ScheduledStatus.valueOf(value)
 }
 
 @Entity(tableName = "conversations")
@@ -136,6 +143,28 @@ data class SecretRule(
     /** Numéro normalisé ou mot-clé en minuscules. */
     val value: String,
     val addedAt: Long,
+)
+
+/** Statut d'un SMS programmé (F9). */
+enum class ScheduledStatus {
+    PENDING,
+    SENT,
+    CANCELLED,
+    FAILED,
+}
+
+/** SMS programmé (F9) : envoi différé via WorkManager. */
+@Entity(tableName = "scheduled_messages")
+data class ScheduledMessage(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val address: String,
+    val body: String,
+    /** Échéance en millisecondes (epoch). */
+    val scheduledAt: Long,
+    /** Abonnement (-1 = SIM par défaut). */
+    val subscriptionId: Int = -1,
+    val status: ScheduledStatus = ScheduledStatus.PENDING,
+    val createdAt: Long,
 )
 
 /** Résultat de recherche plein texte : extrait avec marqueurs de surlignage. */
@@ -252,6 +281,27 @@ interface SecretRuleDao {
     suspend fun getAll(): List<SecretRule>
 }
 
+@Dao
+interface ScheduledMessageDao {
+    @Insert
+    suspend fun insert(message: ScheduledMessage): Long
+
+    @Query("SELECT * FROM scheduled_messages WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): ScheduledMessage?
+
+    @Query("SELECT * FROM scheduled_messages WHERE status = 'PENDING' ORDER BY scheduledAt ASC")
+    suspend fun getPending(): List<ScheduledMessage>
+
+    @Query("SELECT * FROM scheduled_messages ORDER BY scheduledAt DESC")
+    fun observeAll(): Flow<List<ScheduledMessage>>
+
+    @Query("UPDATE scheduled_messages SET status = :status WHERE id = :id")
+    suspend fun updateStatus(id: Long, status: ScheduledStatus)
+
+    @Query("DELETE FROM scheduled_messages WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -339,8 +389,9 @@ fun toFtsMatch(input: String): String {
         BlockEvent::class,
         ArchivedThread::class,
         SecretRule::class,
+        ScheduledMessage::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -352,6 +403,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun archiveDao(): ArchiveDao
     abstract fun searchDao(): SearchDao
     abstract fun secretRuleDao(): SecretRuleDao
+    abstract fun scheduledMessageDao(): ScheduledMessageDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -368,6 +420,19 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             "CREATE TABLE IF NOT EXISTS secret_rules (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 "type TEXT NOT NULL, value TEXT NOT NULL, addedAt INTEGER NOT NULL)",
+        )
+    }
+}
+
+/** Migration 5 -> 6 : table scheduled_messages (SMS programmés, F9). */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS scheduled_messages (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "address TEXT NOT NULL, body TEXT NOT NULL, " +
+                "scheduledAt INTEGER NOT NULL, subscriptionId INTEGER NOT NULL, " +
+                "status TEXT NOT NULL, createdAt INTEGER NOT NULL)",
         )
     }
 }

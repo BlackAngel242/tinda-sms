@@ -1,0 +1,82 @@
+package tech.dmampro.tinda.sms
+
+import android.content.Context
+import androidx.work.CoroutineWorker
+import androidx.work.WorkerParameters
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
+import tech.dmampro.tinda.data.SmsRepository
+import tech.dmampro.tinda.data.local.ScheduledStatus
+import tech.dmampro.tinda.data.local.TindaDatabase
+import tech.dmampro.tinda.util.SendJournal
+import tech.dmampro.tinda.util.TindaLogger
+import tech.dmampro.tinda.util.isDefaultSmsApp
+
+/** Point d'entrée Hilt pour le worker (sans dépendance hilt-work). */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface ScheduledWorkerEntryPoint {
+    fun db(): TindaDatabase
+    fun repository(): SmsRepository
+    fun sender(): SmsSender
+}
+
+/**
+ * Envoie un SMS programmé (F9) à l'échéance.
+ *
+ * Le worker relit la ligne : si elle n'est plus PENDING (annulée ou déjà
+ * envoyée), il ne fait rien (idempotent). Si Tinda n'est plus l'appli SMS
+ * par défaut, l'envoi est marqué FAILED plutôt que perdu.
+ */
+class ScheduledSmsWorker(
+    context: Context,
+    params: WorkerParameters,
+) : CoroutineWorker(context, params) {
+
+    private val entryPoint: ScheduledWorkerEntryPoint =
+        EntryPointAccessors.fromApplication(
+            context.applicationContext,
+            ScheduledWorkerEntryPoint::class.java,
+        )
+
+    override suspend fun doWork(): Result {
+        val id = inputData.getLong(KEY_SCHEDULED_ID, -1L)
+        if (id < 0) return Result.failure()
+        val dao = entryPoint.db().scheduledMessageDao()
+        val item = dao.getById(id) ?: return Result.failure()
+        if (item.status != ScheduledStatus.PENDING) {
+            TindaLogger.i(TAG, "SMS programmé déjà traité")
+            return Result.success()
+        }
+        if (!isDefaultSmsApp(applicationContext)) {
+            dao.updateStatus(id, ScheduledStatus.FAILED)
+            SendJournal.log("programmé : échec, pas appli par défaut")
+            return Result.failure()
+        }
+        return try {
+            val threadId = entryPoint.repository().getOrCreateThreadId(item.address)
+            entryPoint.sender().send(
+                address = item.address,
+                body = item.body,
+                subscriptionId = item.subscriptionId,
+                threadId = threadId,
+                deliveryReport = true,
+            )
+            dao.updateStatus(id, ScheduledStatus.SENT)
+            SendJournal.log("programmé : envoyé")
+            Result.success()
+        } catch (e: Exception) {
+            TindaLogger.w(TAG, "échec d'envoi programmé")
+            dao.updateStatus(id, ScheduledStatus.FAILED)
+            Result.failure()
+        }
+    }
+
+    companion object {
+        private const val TAG = "ScheduledSmsWorker"
+        const val KEY_SCHEDULED_ID = "scheduled_id"
+        const val WORK_TAG = "tinda_scheduled_sms"
+    }
+}

@@ -142,4 +142,18 @@
     <string name="vault_keyword_hint">Mot-clé (ex. code, secret)</string>
     <string name="vault_disguise_title">Phrase de reconnaissance</string>
     <string name="vault_disguise_explain">Cette phrase apparaît dans la notification déguisée pour vous signaler un message secret, sans révéler ni l\'expéditeur ni le contenu.</string>
+    <string name="back">Retour</string>
+    <string name="schedule_title">Programmer l\'envoi</string>
+    <string name="schedule_pick_date">Choisissez une date</string>
+    <string name="schedule_pick_time">Choisissez l\'heure d\'envoi</string>
+    <string name="schedule_confirm">Programmer</string>
+    <string name="scheduled_title">SMS programmés</string>
+    <string name="scheduled_empty">Aucun SMS programmé pour le moment.</string>
+    <string name="scheduled_cancel">Annuler cet envoi</string>
+    <string name="scheduled_pending">en attente</string>
+    <string name="scheduled_sent">envoyé</string>
+    <string name="scheduled_cancelled">annulé</string>
+    <string name="scheduled_failed">échec</string>
+    <string name="settings_scheduled">SMS programmés</string>
+    <string name="settings_scheduled_desc">Voir et annuler les envois différés</string>
 </resources>

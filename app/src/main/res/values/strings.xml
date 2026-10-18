@@ -142,4 +142,18 @@
     <string name="vault_keyword_hint">Keyword (e.g. code, secret)</string>
     <string name="vault_disguise_title">Recognition phrase</string>
     <string name="vault_disguise_explain">This phrase appears in the disguised notification to signal a secret message, without revealing sender or content.</string>
+    <string name="back">Back</string>
+    <string name="schedule_title">Schedule send</string>
+    <string name="schedule_pick_date">Pick a date</string>
+    <string name="schedule_pick_time">Pick the send time</string>
+    <string name="schedule_confirm">Schedule</string>
+    <string name="scheduled_title">Scheduled SMS</string>
+    <string name="scheduled_empty">No scheduled SMS yet.</string>
+    <string name="scheduled_cancel">Cancel this send</string>
+    <string name="scheduled_pending">pending</string>
+    <string name="scheduled_sent">sent</string>
+    <string name="scheduled_cancelled">cancelled</string>
+    <string name="scheduled_failed">failed</string>
+    <string name="settings_scheduled">Scheduled SMS</string>
+    <string name="settings_scheduled_desc">View and cancel deferred sends</string>
 </resources>

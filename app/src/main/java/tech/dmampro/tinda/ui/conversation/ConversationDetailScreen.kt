@@ -50,6 +50,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.ui.schedule.ScheduleDialog
 import tech.dmampro.tinda.util.SmsEncoding
 import tech.dmampro.tinda.util.TimeFormat
 
@@ -70,6 +71,7 @@ fun ConversationDetailScreen(
     val draft by viewModel.draftText.collectAsState()
     var simMenuOpen by remember { mutableStateOf(false) }
     var failedMessage by remember { mutableStateOf<Message?>(null) }
+    var showSchedule by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     // Toujours scroller vers le dernier message.
@@ -106,6 +108,15 @@ fun ConversationDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = { showSchedule = draft.isNotBlank() },
+                        enabled = draft.isNotBlank(),
+                    ) {
+                        Icon(
+                            Icons.Filled.Schedule,
+                            contentDescription = stringResource(R.string.schedule_title),
+                        )
+                    }
                     if (uiState.sims.size > 1) {
                         Box {
                             AssistChip(
@@ -217,6 +228,15 @@ fun ConversationDetailScreen(
         FailureDialog(
             message = message,
             onDismiss = { failedMessage = null },
+        )
+    }
+    if (showSchedule) {
+        ScheduleDialog(
+            onConfirm = { atMillis ->
+                showSchedule = false
+                viewModel.scheduleMessage(draft, atMillis)
+            },
+            onDismiss = { showSchedule = false },
         )
     }
 }

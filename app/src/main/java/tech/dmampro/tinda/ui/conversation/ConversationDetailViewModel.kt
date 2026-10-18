@@ -21,6 +21,7 @@ import tech.dmampro.tinda.data.local.Draft
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.TindaDatabase
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.sms.ScheduledSmsManager
 import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
@@ -46,6 +47,7 @@ class ConversationDetailViewModel @Inject constructor(
     private val prefs: PrefsRepository,
     private val db: TindaDatabase,
     private val soundPlayer: SendSoundPlayer,
+    private val scheduler: ScheduledSmsManager,
 ) : ViewModel() {
 
     private val threadId: Long = savedStateHandle.get<Long>("threadId") ?: -1L
@@ -123,6 +125,31 @@ class ConversationDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(sendError = true) }
             } finally {
                 _uiState.update { it.copy(sending = false) }
+            }
+        }
+    }
+
+    /** Programme le brouillon comme SMS différé (F9). */
+    fun scheduleMessage(text: String, atMillis: Long) {
+        val clean = text.trim()
+        if (clean.isBlank()) return
+        viewModelScope.launch {
+            try {
+                val address = repository.getThreadAddress(threadId)
+                if (address.isBlank() || !repository.isDefaultSmsApp()) {
+                    _uiState.update { it.copy(sendError = true) }
+                    return@launch
+                }
+                scheduler.schedule(
+                    address = address,
+                    body = clean,
+                    scheduledAt = atMillis,
+                    subscriptionId = _uiState.value.selectedSimId,
+                )
+                db.draftDao().delete(draftKey())
+                draftText.value = ""
+            } catch (e: Exception) {
+                _uiState.update { it.copy(sendError = true) }
             }
         }
     }
