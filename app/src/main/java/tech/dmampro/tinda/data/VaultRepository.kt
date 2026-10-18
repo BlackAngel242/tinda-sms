@@ -76,11 +76,11 @@ class VaultRepository @Inject constructor(
     }
 
     /**
-     * Initialise le coffre avec un PIN (4 à 12 chiffres). Génère la clé
+     * Initialise le coffre avec un PIN (4 à 6 chiffres). Génère la clé
      * de base et l'enveloppe avec la clé appareil du Keystore.
      */
     fun setupPin(pin: String) {
-        require(pin.length in 4..12 && pin.all { it.isDigit() }) {
+        require(pin.length in 4..6 && pin.all { it.isDigit() }) {
             "PIN invalide"
         }
         VaultCrypto.loadLibraries(context)

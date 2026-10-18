@@ -137,7 +137,7 @@ fun VaultUnlockScreen(
     }
 
     fun onDigit(d: String) {
-        if (pin.length >= 12) return
+        if (pin.length >= 6) return
         error = null
         pin += d
     }
@@ -232,7 +232,7 @@ fun VaultUnlockScreen(
             Spacer(Modifier.height(8.dp))
             // Pastilles du PIN (jamais de chiffres affichés).
             Text(
-                "●".repeat(pin.length) + "○".repeat((12 - pin.length).coerceAtLeast(0)),
+                "●".repeat(pin.length) + "○".repeat((6 - pin.length).coerceAtLeast(0)),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,

@@ -120,7 +120,7 @@
     <string name="edit">Modifier</string>
     <string name="vault_title">Coffre secret</string>
     <string name="vault_enter_pin">Entrez votre code</string>
-    <string name="vault_create_pin">Créez votre code (4 à 12 chiffres)</string>
+    <string name="vault_create_pin">Créez votre code (4 à 6 chiffres)</string>
     <string name="vault_confirm_pin">Confirmez votre code</string>
     <string name="vault_wrong_pin">Code incorrect</string>
     <string name="vault_pin_mismatch">Les codes ne correspondent pas, recommencez</string>

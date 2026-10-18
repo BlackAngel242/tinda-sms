@@ -120,7 +120,7 @@
     <string name="edit">Edit</string>
     <string name="vault_title">Secret vault</string>
     <string name="vault_enter_pin">Enter your PIN</string>
-    <string name="vault_create_pin">Create your PIN (4 to 12 digits)</string>
+    <string name="vault_create_pin">Create your PIN (4 to 6 digits)</string>
     <string name="vault_confirm_pin">Confirm your PIN</string>
     <string name="vault_wrong_pin">Wrong PIN</string>
     <string name="vault_pin_mismatch">PINs do not match, try again</string>
