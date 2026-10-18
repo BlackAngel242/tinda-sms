@@ -52,3 +52,24 @@ app/src/main/java/tech/dmampro/tinda/
 - Aucun code ni asset repris d'une autre app : tout est original.
 - Jamais de contenu SMS ni de numéro dans les logs ou les commits.
 - Tout ce qui touche au coffre-fort ou aux faux SMS ne va **jamais** dans le provider système (RB-01 / RB-03 du PRD).
+
+## Tests terrain (lot 1) — checklist pour SmokeSama
+
+Pas d'appareil réel dans l'environnement de build : ces vérifications se font
+sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
+
+1. **Installation** : installer l'APK debug ; l'onboarding en 2 écrans s'affiche.
+2. **Rôle SMS par défaut** : accepter via le dialogue système ; vérifier que
+   l'app apparaît comme « application SMS » dans les paramètres Android.
+3. **Envoi / réception** : envoyer un SMS vers son propre numéro ; vérifier
+   l'envoi, la réception, la notification et l'accusé « livré ».
+4. **Double SIM** : changer de SIM dans un fil (badge) ; vérifier que la SIM
+   affichée est bien celle utilisée pour l'envoi.
+5. **Refus du rôle** : refuser le dialogue ; vérifier l'écran d'explication et
+   que l'app ne bloque pas la visite.
+6. **Non-régression** : l'app SMS système ne doit pas créer de doublons
+   (Tinda écrit via le provider, le système reflète).
+7. **Brouillon** : commencer un message, quitter le fil, revenir : le texte
+   est toujours là.
+8. **Message long** : envoyer un texte de 200 caractères ; vérifier le
+   compteur « 2 segments » et la bonne réception en un seul SMS.

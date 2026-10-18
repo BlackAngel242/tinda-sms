@@ -1,0 +1,380 @@
+package tech.dmampro.tinda.data
+
+import android.content.ContentValues
+import android.content.Context
+import android.net.Uri
+import android.provider.ContactsContract
+import android.provider.Telephony
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.withContext
+import tech.dmampro.tinda.data.local.Conversation
+import tech.dmampro.tinda.data.local.Message
+import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.data.local.TindaDatabase
+import tech.dmampro.tinda.ui.conversations.ConversationItem
+import tech.dmampro.tinda.util.TindaLogger
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Accès aux SMS : le provider système est la source pour la liste,
+ * Room est le miroir applicatif observé par l'UI (prépare la recherche du lot 2).
+ *
+ * Règle absolue : jamais de contenu ni de numéro dans les logs (AGENTS.md).
+ * Les écritures dans le provider n'ont lieu que si Tinda est la default SMS app.
+ */
+@Singleton
+class SmsRepository @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val db: TindaDatabase,
+) {
+    private val refreshSignal = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
+    private val nameCache = mutableMapOf<String, String>()
+
+    /** Vrai si Tinda est l'application SMS par défaut du système. */
+    fun isDefaultSmsApp(): Boolean =
+        Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+
+    /** Liste des conversations, rafraîchie à chaque [notifyChanged]. */
+    fun observeConversations(): Flow<List<ConversationItem>> =
+        refreshSignal
+            .onStart { emit(Unit) }
+            .map { loadConversations() }
+            .flowOn(Dispatchers.IO)
+            .distinctUntilChanged()
+
+    /** Messages d'un fil, observés depuis le miroir Room. */
+    fun observeThreadMessages(threadId: Long): Flow<List<Message>> =
+        db.messageDao().observeForThread(threadId)
+
+    /** Signale un changement (réception, envoi, lecture) pour rafraîchir l'UI. */
+    fun notifyChanged() {
+        refreshSignal.tryEmit(Unit)
+    }
+
+    /**
+     * Re-synchronise la liste des conversations depuis le provider
+     * (point d'extension : l'indexation recherche du lot 2 s'y branchera).
+     */
+    suspend fun syncConversations() {
+        notifyChanged()
+    }
+
+    /** Recharge le miroir Room d'un fil depuis le provider. */
+    suspend fun syncThread(threadId: Long) = withContext(Dispatchers.IO) {
+        try {
+            val rows = queryThreadMessages(threadId)
+            db.messageDao().insertAllIgnore(rows)
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "syncThread sans permission SMS")
+        }
+    }
+
+    /** Adresse du premier message d'un fil (pour l'envoi). */
+    suspend fun getThreadAddress(threadId: Long): String = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                arrayOf(Telephony.Sms.ADDRESS),
+                "${Telephony.Sms.THREAD_ID} = ?",
+                arrayOf(threadId.toString()),
+                "${Telephony.Sms.DATE} ASC LIMIT 1",
+            )?.use { c ->
+                if (c.moveToFirst()) return@withContext c.getString(0).orEmpty()
+            }
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "getThreadAddress sans permission SMS")
+        }
+        ""
+    }
+
+    /** Nom d'affichage d'un numéro (contacts, avec cache mémoire). */
+    suspend fun resolveDisplayName(address: String): String = withContext(Dispatchers.IO) {
+        if (address.isBlank()) return@withContext address
+        nameCache[address]?.let { return@withContext it }
+        val name = try {
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(address),
+            )
+            context.contentResolver.query(
+                uri,
+                arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                null, null, null,
+            )?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            } ?: address
+        } catch (e: SecurityException) {
+            address
+        }
+        nameCache[address] = name
+        name
+    }
+
+    /** Thread existant ou créé pour un numéro (pour une nouvelle conversation). */
+    suspend fun getOrCreateThreadId(address: String): Long = withContext(Dispatchers.IO) {
+        try {
+            Telephony.Threads.getOrCreateThreadId(context, address)
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "getOrCreateThreadId sans permission SMS")
+            -1L
+        }
+    }
+
+    /**
+     * Persiste un SMS reçu : écriture dans le provider (rôle default handler
+     * requis) puis miroir Room. Retourne l'identifiant de fil, -1 si refusé.
+     */
+    suspend fun insertIncoming(
+        address: String,
+        body: String,
+        dateMillis: Long,
+        subscriptionId: Int,
+    ): Long = withContext(Dispatchers.IO) {
+        if (!isDefaultSmsApp()) {
+            TindaLogger.w(TAG, "insertIncoming refusé : pas default SMS app")
+            return@withContext -1L
+        }
+        val threadId = try {
+            val values = ContentValues().apply {
+                put(Telephony.Sms.ADDRESS, address)
+                put(Telephony.Sms.BODY, body)
+                put(Telephony.Sms.DATE, dateMillis)
+                put(Telephony.Sms.READ, 0)
+                put(Telephony.Sms.SEEN, 0)
+                if (subscriptionId >= 0) put(Telephony.Sms.SUBSCRIPTION_ID, subscriptionId)
+            }
+            val uri = context.contentResolver.insert(Telephony.Sms.Inbox.CONTENT_URI, values)
+            val providerId = uri?.lastPathSegment?.toLongOrNull()
+            val tid = Telephony.Threads.getOrCreateThreadId(context, address)
+            db.messageDao().insert(
+                Message(
+                    providerId = providerId,
+                    threadId = tid,
+                    address = address,
+                    body = body,
+                    date = dateMillis,
+                    read = false,
+                    incoming = true,
+                    status = MessageStatus.RECEIVED,
+                    subscriptionId = subscriptionId,
+                ),
+            )
+            db.conversationDao().upsertAll(listOf(conversationEntity(tid, address, body, dateMillis, unread = 1)))
+            tid
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "insertIncoming sans permission d'écriture SMS")
+            -1L
+        }
+        notifyChanged()
+        threadId
+    }
+
+    /** Marque un fil comme lu (provider + miroir). */
+    suspend fun markThreadRead(threadId: Long) = withContext(Dispatchers.IO) {
+        try {
+            val values = ContentValues().apply { put(Telephony.Sms.READ, 1) }
+            context.contentResolver.update(
+                Telephony.Sms.CONTENT_URI, values,
+                "${Telephony.Sms.THREAD_ID} = ?", arrayOf(threadId.toString()),
+            )
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "markThreadRead sans permission d'écriture SMS")
+        }
+        db.messageDao().markThreadRead(threadId)
+        notifyChanged()
+    }
+
+    /** Met à jour le statut d'un message sortant (accusés d'envoi / livraison). */
+    suspend fun updateMessageStatus(token: String, status: MessageStatus) =
+        withContext(Dispatchers.IO) {
+            db.messageDao().updateStatusByToken(token, status)
+            // Best effort : reflète aussi le statut dans le provider système.
+            try {
+                val row = db.messageDao().findByToken(token)
+                val providerId = row?.providerId
+                if (providerId != null) {
+                    val values = ContentValues().apply {
+                        put(
+                            Telephony.Sms.STATUS,
+                            when (status) {
+                                MessageStatus.DELIVERED, MessageStatus.SENT ->
+                                    Telephony.Sms.STATUS_COMPLETE
+                                MessageStatus.FAILED -> Telephony.Sms.STATUS_FAILED
+                                else -> Telephony.Sms.STATUS_NONE
+                            },
+                        )
+                    }
+                    context.contentResolver.update(
+                        Telephony.Sms.CONTENT_URI, values,
+                        "${Telephony.Sms._ID} = ?", arrayOf(providerId.toString()),
+                    )
+                }
+            } catch (e: SecurityException) {
+                TindaLogger.w(TAG, "updateMessageStatus sans permission d'écriture SMS")
+            }
+            notifyChanged()
+        }
+
+    // ---- Lecture du provider ----
+
+    private data class ThreadRow(
+        val threadId: Long,
+        val address: String,
+        val snippet: String,
+        val date: Long,
+        val unread: Int,
+    )
+
+    private fun loadConversations(): List<ConversationItem> {
+        val rows = try {
+            queryThreads()
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "lecture conversations sans permission SMS")
+            return emptyList()
+        }
+        return rows.map { row ->
+            ConversationItem(
+                threadId = row.threadId,
+                displayName = runCatching { lookupNameSync(row.address) }.getOrDefault(row.address),
+                snippet = row.snippet,
+                date = row.date,
+                unread = row.unread > 0,
+            )
+        }
+    }
+
+    /** Une seule requête groupée en mémoire : premier message = extrait, compte des non-lus. */
+    private fun queryThreads(): List<ThreadRow> {
+        val rows = linkedMapOf<Long, ThreadRow>()
+        val unread = mutableMapOf<Long, Int>()
+        val projection = arrayOf(
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.READ,
+        )
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI, projection, null, null,
+            "${Telephony.Sms.DATE} DESC",
+        )?.use { c ->
+            val iThread = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            val iAddress = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val iBody = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val iDate = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val iRead = c.getColumnIndexOrThrow(Telephony.Sms.READ)
+            while (c.moveToNext()) {
+                val threadId = c.getLong(iThread)
+                if (c.getInt(iRead) == 0) unread[threadId] = (unread[threadId] ?: 0) + 1
+                if (!rows.containsKey(threadId)) {
+                    rows[threadId] = ThreadRow(
+                        threadId = threadId,
+                        address = c.getString(iAddress).orEmpty(),
+                        snippet = c.getString(iBody).orEmpty(),
+                        date = c.getLong(iDate),
+                        unread = 0,
+                    )
+                }
+            }
+        }
+        return rows.values.map { it.copy(unread = unread[it.threadId] ?: 0) }
+    }
+
+    private fun queryThreadMessages(threadId: Long): List<Message> {
+        val out = mutableListOf<Message>()
+        val projection = arrayOf(
+            Telephony.Sms._ID,
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.READ,
+            Telephony.Sms.TYPE,
+            Telephony.Sms.STATUS,
+            Telephony.Sms.SUBSCRIPTION_ID,
+        )
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI, projection,
+            "${Telephony.Sms.THREAD_ID} = ?", arrayOf(threadId.toString()),
+            "${Telephony.Sms.DATE} ASC",
+        )?.use { c ->
+            val iId = c.getColumnIndexOrThrow(Telephony.Sms._ID)
+            val iAddress = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val iBody = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val iDate = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val iRead = c.getColumnIndexOrThrow(Telephony.Sms.READ)
+            val iType = c.getColumnIndexOrThrow(Telephony.Sms.TYPE)
+            val iStatus = c.getColumnIndexOrThrow(Telephony.Sms.STATUS)
+            val iSub = c.getColumnIndexOrThrow(Telephony.Sms.SUBSCRIPTION_ID)
+            while (c.moveToNext()) {
+                val type = c.getInt(iType)
+                out.add(
+                    Message(
+                        providerId = c.getLong(iId),
+                        threadId = threadId,
+                        address = c.getString(iAddress).orEmpty(),
+                        body = c.getString(iBody).orEmpty(),
+                        date = c.getLong(iDate),
+                        read = c.getInt(iRead) == 1,
+                        incoming = type == Telephony.Sms.MESSAGE_TYPE_INBOX,
+                        status = when {
+                            type == Telephony.Sms.MESSAGE_TYPE_INBOX -> MessageStatus.RECEIVED
+                            c.getInt(iStatus) == Telephony.Sms.STATUS_COMPLETE -> MessageStatus.DELIVERED
+                            c.getInt(iStatus) == Telephony.Sms.STATUS_FAILED -> MessageStatus.FAILED
+                            else -> MessageStatus.SENT
+                        },
+                        subscriptionId = c.getInt(iSub),
+                    ),
+                )
+            }
+        }
+        return out
+    }
+
+    private fun lookupNameSync(address: String): String {
+        if (address.isBlank()) return address
+        nameCache[address]?.let { return it }
+        val name = try {
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(address),
+            )
+            context.contentResolver.query(
+                uri, arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME),
+                null, null, null,
+            )?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            } ?: address
+        } catch (e: SecurityException) {
+            address
+        }
+        nameCache[address] = name
+        return name
+    }
+
+    private fun conversationEntity(
+        threadId: Long,
+        address: String,
+        snippet: String,
+        date: Long,
+        unread: Int,
+    ) = Conversation(
+        threadId = threadId,
+        displayName = nameCache[address] ?: address,
+        lastSnippet = snippet,
+        lastDate = date,
+        unreadCount = unread,
+    )
+
+    companion object {
+        private const val TAG = "SmsRepository"
+    }
+}

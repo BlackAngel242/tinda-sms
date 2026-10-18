@@ -3,6 +3,7 @@ package tech.dmampro.tinda
 import android.app.Application
 import android.os.StrictMode
 import dagger.hilt.android.HiltAndroidApp
+import tech.dmampro.tinda.notifications.NotificationHelper
 import tech.dmampro.tinda.util.TindaLogger
 
 @HiltAndroidApp
@@ -19,6 +20,8 @@ class TindaApp : Application() {
                 StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build()
             )
         }
+        // Canal de notification des SMS reçus (lot 1).
+        NotificationHelper.createChannel(this)
         TindaLogger.i(TAG, "Application démarrée")
     }
 

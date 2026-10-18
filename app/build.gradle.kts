@@ -82,7 +82,10 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
 
     ksp(libs.androidx.room.compiler)
     ksp(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
 }
