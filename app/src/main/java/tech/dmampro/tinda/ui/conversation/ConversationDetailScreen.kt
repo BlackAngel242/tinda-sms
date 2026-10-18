@@ -232,7 +232,15 @@ private fun MessageBubble(
         horizontalArrangement = if (isIncoming) Arrangement.Start else Arrangement.End,
     ) {
         Surface(
-            shape = RoundedCornerShape(16.dp),
+            // Bulles directionnelles façon messagerie classique : le coin
+            // côté expéditeur est coupé (4.dp), les autres arrondis (18.dp).
+            // Style original recréé de zéro, aucun asset repris.
+            shape = RoundedCornerShape(
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = if (isIncoming) 4.dp else 18.dp,
+                bottomEnd = if (isIncoming) 18.dp else 4.dp,
+            ),
             color = if (isIncoming) {
                 MaterialTheme.colorScheme.surfaceVariant
             } else {

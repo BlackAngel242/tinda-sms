@@ -16,6 +16,11 @@ Conventions : pas de contenu SMS ni numéro dans les logs/commits, jamais de cod
 - [ ] Valider les gestes swipe sur le téléphone
 - [ ] Valider la liste noire + journal sur le téléphone
 
+## Design : thème façon YAATA (demandé par SmokeSama, 18 oct.)
+- [ ] Recréer le style YAATA de zéro (bulles, espacements, couleurs),
+  sans reprendre code, assets ni marque (ligne rouge)
+- [ ] Améliorer ensuite par-dessus
+
 ## LOT 3 : automatismes (dépend des lots 0 à 2, base validée)
 
 - F9 SMS programmés
@@ -40,6 +45,15 @@ Conventions : pas de contenu SMS ni numéro dans les logs/commits, jamais de cod
 - [ ] Build + APK + validation terrain
 
 ## LOT 4 : coffre-fort et suppression auto (dépend du lot 3)
+
+Concept étendu « coffre secret » (idée de SmokeSama, 18 oct.) :
+- Entrée discrète : appui long sur le + ouvre la zone secrète
+- Ouverture par code PIN ou biométrie (le PIN reste obligatoire en repli)
+- Liste jaune : numéros ajoutés à la main ou mots-clés ; leurs messages
+  vont directement au coffre
+- Notification déguisée : message banal avec une phrase de reconnaissance
+  configurable par l'utilisateur
+- Chiffrement réel (SQLCipher déjà intégré), pas de « mini »
 
 - Coffre-fort
   - [ ] Schéma chiffré (SQLCipher déjà intégré)
