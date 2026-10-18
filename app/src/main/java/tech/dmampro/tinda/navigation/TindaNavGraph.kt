@@ -22,6 +22,7 @@ import tech.dmampro.tinda.ui.vault.VaultRulesScreen
 import tech.dmampro.tinda.ui.vault.VaultUnlockScreen
 import tech.dmampro.tinda.ui.schedule.ScheduledListScreen
 import tech.dmampro.tinda.ui.autoreply.AutoReplyScreen
+import tech.dmampro.tinda.ui.forward.ForwardScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -94,6 +95,7 @@ fun TindaNavGraph(
                 onOpenDiagnostic = { navController.navigate(Routes.DIAGNOSTIC) },
                 onOpenScheduled = { navController.navigate(Routes.SCHEDULED) },
                 onOpenAutoreply = { navController.navigate(Routes.AUTOREPLY) },
+                onOpenForward = { navController.navigate(Routes.FORWARD) },
             )
         }
         composable(Routes.BLOCKLIST) {
@@ -143,6 +145,9 @@ fun TindaNavGraph(
         }
         composable(Routes.AUTOREPLY) {
             AutoReplyScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.FORWARD) {
+            ForwardScreen(onBack = { navController.popBackStack() })
         }
     }
 }

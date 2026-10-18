@@ -15,6 +15,7 @@ object Routes {
     const val VAULT_RULES = "vault_rules"
     const val SCHEDULED = "scheduled"
     const val AUTOREPLY = "autoreply"
+    const val FORWARD = "forward"
 
     fun conversationDetail(threadId: Long) = "conversation/$threadId"
     fun vaultConversation(address: String) =

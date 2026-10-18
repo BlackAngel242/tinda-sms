@@ -39,6 +39,9 @@ class SmsReceiver : BroadcastReceiver() {
     @Inject
     lateinit var autoReplyManager: AutoReplyManager
 
+    @Inject
+    lateinit var forwardManager: ForwardManager
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -96,6 +99,9 @@ class SmsReceiver : BroadcastReceiver() {
                 // Répondeur automatique (F10) : première règle active qui
                 // correspond répond une fois, avec anti-boucle intégré.
                 autoReplyManager.handleIncoming(address, body, threadId, subscriptionId)
+                // Transfert automatique (F11) : recopie vers le destinataire
+                // des règles correspondantes, avec anti-boucle.
+                forwardManager.handleIncoming(address, body, threadId, subscriptionId)
             } finally {
                 pending.finish()
             }

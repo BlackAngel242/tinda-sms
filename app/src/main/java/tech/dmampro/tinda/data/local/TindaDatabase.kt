@@ -191,6 +191,32 @@ data class AutoReplyState(
     val sentAt: Long,
 )
 
+/** Règle de transfert automatique (F11). */
+@Entity(tableName = "forward_rules")
+data class ForwardRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val enabled: Boolean = true,
+    /** "NUMBER" (expéditeur exact) ou "KEYWORD" (mot dans le texte). */
+    val sourceType: String = "NUMBER",
+    val sourceValue: String = "",
+    /** Numéro destinataire du transfert. */
+    val destination: String = "",
+    /** true = transfère le texte original, false = simple notification. */
+    val includeContent: Boolean = true,
+)
+
+/** Transferts déjà effectués (anti-boucle et déduplication, F11). */
+@Entity(
+    tableName = "forward_log",
+    primaryKeys = ["ruleId", "address", "sentAt"],
+)
+data class ForwardLog(
+    val ruleId: Long,
+    val address: String,
+    val sentAt: Long,
+)
+
 /** SMS programmé (F9) : envoi différé via WorkManager. */
 @Entity(tableName = "scheduled_messages")
 data class ScheduledMessage(
@@ -376,6 +402,39 @@ interface AutoReplyStateDao {
     suspend fun cleanup(olderThan: Long)
 }
 
+@Dao
+interface ForwardDao {
+    @Insert
+    suspend fun insert(rule: ForwardRule): Long
+
+    @Update
+    suspend fun update(rule: ForwardRule)
+
+    @Query("DELETE FROM forward_rules WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM forward_rules WHERE enabled = 1 ORDER BY id ASC")
+    suspend fun getEnabled(): List<ForwardRule>
+
+    @Query("SELECT * FROM forward_rules ORDER BY id ASC")
+    fun observeAll(): Flow<List<ForwardRule>>
+
+    @Query("UPDATE forward_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun logForward(entry: ForwardLog)
+
+    @Query(
+        "SELECT COUNT(*) FROM forward_log WHERE ruleId = :ruleId " +
+            "AND address = :address AND sentAt > :since",
+    )
+    suspend fun countRecent(ruleId: Long, address: String, since: Long): Int
+
+    @Query("DELETE FROM forward_log WHERE sentAt < :olderThan")
+    suspend fun cleanup(olderThan: Long)
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -466,8 +525,10 @@ fun toFtsMatch(input: String): String {
         ScheduledMessage::class,
         AutoReplyRule::class,
         AutoReplyState::class,
+        ForwardRule::class,
+        ForwardLog::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -482,6 +543,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun scheduledMessageDao(): ScheduledMessageDao
     abstract fun autoReplyDao(): AutoReplyDao
     abstract fun autoReplyStateDao(): AutoReplyStateDao
+    abstract fun forwardDao(): ForwardDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -531,6 +593,25 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
                 "ruleId INTEGER NOT NULL, address TEXT NOT NULL, " +
                 "sentAt INTEGER NOT NULL, " +
                 "PRIMARY KEY (ruleId, address))",
+        )
+    }
+}
+
+/** Migration 7 -> 8 : tables du transfert automatique (F11). */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS forward_rules (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "name TEXT NOT NULL, enabled INTEGER NOT NULL, " +
+                "sourceType TEXT NOT NULL, sourceValue TEXT NOT NULL, " +
+                "destination TEXT NOT NULL, includeContent INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS forward_log (" +
+                "ruleId INTEGER NOT NULL, address TEXT NOT NULL, " +
+                "sentAt INTEGER NOT NULL, " +
+                "PRIMARY KEY (ruleId, address, sentAt))",
         )
     }
 }
