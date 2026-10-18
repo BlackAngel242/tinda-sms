@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Manifest Tinda SMS (lot 0).
-  Rôle « default SMS app » : les 4 composants requis par Android sont déclarés,
+  Manifest Tinda SMS.
+  Rôle « default SMS app » : les composants requis par Android sont déclarés
+  selon la doc officielle (service pour RESPOND_VIA_MESSAGE, pas une activité),
   TOUS avec android:exported explicite (obligatoire depuis API 31).
   Périmètre SMS uniquement (DEC-002) : aucun traitement MMS.
 -->
@@ -62,7 +63,7 @@
             </intent-filter>
         </receiver>
 
-        <!-- 3/4 : réponse depuis la notification d'appel manqué. -->
+        <!-- 3/4 : réponse depuis la notification d'appel manqué (activité interne). -->
         <activity
             android:name=".sms.RespondViaMessageActivity"
             android:exported="true"
@@ -74,15 +75,39 @@
             </intent-filter>
         </activity>
 
-        <!-- 4/4 : composition d'un SMS depuis une autre app. -->
+        <!-- 3bis/4 : SERVICE de réponse rapide. Point critique : Android
+             qualifie les candidates "default SMS" en interrogeant les SERVICES
+             pour RESPOND_VIA_MESSAGE (doc officielle). Sans ce service, Tinda
+             n'apparaît pas dans la liste des applis SMS par défaut. -->
+        <service
+            android:name=".sms.RespondViaMessageService"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
+            </intent-filter>
+        </service>
+
+        <!-- 4/4 : composition d'un SMS depuis une autre app.
+             Les 4 schemes (doc officielle) : sans eux la qualification
+             "default SMS" peut échouer sur certaines ROM. -->
         <activity
             android:name=".sms.ComposeSmsActivity"
             android:exported="true">
             <intent-filter>
+                <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SENDTO" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="smsto" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="sms" />
+                <data android:scheme="smsto" />
+                <data android:scheme="mms" />
+                <data android:scheme="mmsto" />
             </intent-filter>
         </activity>
 
