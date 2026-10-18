@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.AppLanguage
 import tech.dmampro.tinda.data.PrefsRepository
 import tech.dmampro.tinda.notifications.NotificationHelper
+import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.util.LocaleHelper
 import tech.dmampro.tinda.util.TindaLogger
 import javax.inject.Inject
@@ -31,6 +32,10 @@ class TindaApp : Application() {
                 StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build()
             )
         }
+        // Journal d'événements d'utilisation (diagnostic à distance) :
+        // initialisé tôt, avant tout écran.
+        EventLog.init(filesDir)
+        EventLog.log("app.start")
         // Canal de notification des SMS reçus (lot 1).
         NotificationHelper.createChannel(this)
         // Langue par application choisie dans les paramètres (lot 2, F8).

@@ -36,6 +36,9 @@ class SmsReceiver : BroadcastReceiver() {
     @Inject
     lateinit var vaultRepository: VaultRepository
 
+    @Inject
+    lateinit var autoReplyManager: AutoReplyManager
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -89,6 +92,10 @@ class SmsReceiver : BroadcastReceiver() {
 
                 val displayName = repository.resolveDisplayName(address)
                 NotificationHelper.showMessage(context, threadId, displayName, body)
+
+                // Répondeur automatique (F10) : première règle active qui
+                // correspond répond une fois, avec anti-boucle intégré.
+                autoReplyManager.handleIncoming(address, body, threadId, subscriptionId)
             } finally {
                 pending.finish()
             }

@@ -14,6 +14,7 @@ import androidx.room.RawQuery
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.Update
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
@@ -53,6 +54,12 @@ class Converters {
     @TypeConverter
     fun stringToScheduledStatus(value: String): ScheduledStatus =
         ScheduledStatus.valueOf(value)
+
+    @TypeConverter
+    fun scopeToString(scope: AutoReplyScope): String = scope.name
+
+    @TypeConverter
+    fun stringToScope(value: String): AutoReplyScope = AutoReplyScope.valueOf(value)
 }
 
 @Entity(tableName = "conversations")
@@ -152,6 +159,37 @@ enum class ScheduledStatus {
     CANCELLED,
     FAILED,
 }
+
+/** Portée d'une règle de répondeur (F10). */
+enum class AutoReplyScope { ALL, CONTACTS_ONLY, NON_CONTACTS }
+
+/** Règle de répondeur automatique (F10). */
+@Entity(tableName = "auto_reply_rules")
+data class AutoReplyRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val enabled: Boolean = true,
+    val message: String,
+    /** Plage horaire : -1/-1 = toujours actif. */
+    val startHour: Int = -1,
+    val endHour: Int = -1,
+    /** Masque de bits des jours actifs (bit jour-1, Calendar.SUNDAY=1), 127 = tous. */
+    val days: Int = 127,
+    val scope: AutoReplyScope = AutoReplyScope.ALL,
+    /** Délai minimal (heures) entre deux réponses au même numéro. */
+    val cooldownHours: Int = 24,
+)
+
+/** Dernier envoi auto par règle et par numéro (anti-boucle, F10). */
+@Entity(
+    tableName = "auto_reply_state",
+    primaryKeys = ["ruleId", "address"],
+)
+data class AutoReplyState(
+    val ruleId: Long,
+    val address: String,
+    val sentAt: Long,
+)
 
 /** SMS programmé (F9) : envoi différé via WorkManager. */
 @Entity(tableName = "scheduled_messages")
@@ -302,6 +340,42 @@ interface ScheduledMessageDao {
     suspend fun delete(id: Long)
 }
 
+@Dao
+interface AutoReplyDao {
+    @Insert
+    suspend fun insert(rule: AutoReplyRule): Long
+
+    @Update
+    suspend fun update(rule: AutoReplyRule)
+
+    @Query("DELETE FROM auto_reply_rules WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM auto_reply_rules WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Long): AutoReplyRule?
+
+    @Query("SELECT * FROM auto_reply_rules WHERE enabled = 1 ORDER BY id ASC")
+    suspend fun getEnabled(): List<AutoReplyRule>
+
+    @Query("SELECT * FROM auto_reply_rules ORDER BY id ASC")
+    fun observeAll(): Flow<List<AutoReplyRule>>
+
+    @Query("UPDATE auto_reply_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+}
+
+@Dao
+interface AutoReplyStateDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(state: AutoReplyState)
+
+    @Query("SELECT sentAt FROM auto_reply_state WHERE ruleId = :ruleId AND address = :address LIMIT 1")
+    suspend fun lastSentAt(ruleId: Long, address: String): Long?
+
+    @Query("DELETE FROM auto_reply_state WHERE sentAt < :olderThan")
+    suspend fun cleanup(olderThan: Long)
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -390,8 +464,10 @@ fun toFtsMatch(input: String): String {
         ArchivedThread::class,
         SecretRule::class,
         ScheduledMessage::class,
+        AutoReplyRule::class,
+        AutoReplyState::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -404,6 +480,8 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun searchDao(): SearchDao
     abstract fun secretRuleDao(): SecretRuleDao
     abstract fun scheduledMessageDao(): ScheduledMessageDao
+    abstract fun autoReplyDao(): AutoReplyDao
+    abstract fun autoReplyStateDao(): AutoReplyStateDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -433,6 +511,26 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
                 "address TEXT NOT NULL, body TEXT NOT NULL, " +
                 "scheduledAt INTEGER NOT NULL, subscriptionId INTEGER NOT NULL, " +
                 "status TEXT NOT NULL, createdAt INTEGER NOT NULL)",
+        )
+    }
+}
+
+/** Migration 6 -> 7 : tables du répondeur automatique (F10). */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS auto_reply_rules (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "name TEXT NOT NULL, enabled INTEGER NOT NULL, " +
+                "message TEXT NOT NULL, startHour INTEGER NOT NULL, " +
+                "endHour INTEGER NOT NULL, days INTEGER NOT NULL, " +
+                "scope TEXT NOT NULL, cooldownHours INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS auto_reply_state (" +
+                "ruleId INTEGER NOT NULL, address TEXT NOT NULL, " +
+                "sentAt INTEGER NOT NULL, " +
+                "PRIMARY KEY (ruleId, address))",
         )
     }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.AppLanguage
 import tech.dmampro.tinda.data.BlockRepository
 import tech.dmampro.tinda.data.PrefsRepository
+import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.SwipeAction
 import tech.dmampro.tinda.util.LocaleHelper
@@ -56,7 +57,10 @@ class SettingsViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setTheme(id: String) {
-        viewModelScope.launch { prefs.setAppThemeId(id) }
+        viewModelScope.launch {
+            prefs.setAppThemeId(id)
+            EventLog.log("theme.set", id)
+        }
     }
 
     fun setThemeMode(mode: String) {

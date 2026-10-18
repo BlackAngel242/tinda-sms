@@ -1,11 +1,14 @@
 package tech.dmampro.tinda.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.onboarding.OnboardingScreen
 import tech.dmampro.tinda.ui.conversation.ConversationDetailScreen
 import tech.dmampro.tinda.ui.conversations.ConversationListScreen
@@ -18,6 +21,7 @@ import tech.dmampro.tinda.ui.vault.VaultHomeScreen
 import tech.dmampro.tinda.ui.vault.VaultRulesScreen
 import tech.dmampro.tinda.ui.vault.VaultUnlockScreen
 import tech.dmampro.tinda.ui.schedule.ScheduledListScreen
+import tech.dmampro.tinda.ui.autoreply.AutoReplyScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -30,6 +34,14 @@ fun TindaNavGraph(
     onRequestDefaultRole: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    // Journal d'écrans vus (diagnostic à distance, sans contenu).
+    DisposableEffect(navController) {
+        val listener = NavController.OnDestinationChangedListener { _, destination, _ ->
+            EventLog.log("screen", destination.route ?: "?")
+        }
+        navController.addOnDestinationChangedListener(listener)
+        onDispose { navController.removeOnDestinationChangedListener(listener) }
+    }
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -81,6 +93,7 @@ fun TindaNavGraph(
                 onOpenBlocklist = { navController.navigate(Routes.BLOCKLIST) },
                 onOpenDiagnostic = { navController.navigate(Routes.DIAGNOSTIC) },
                 onOpenScheduled = { navController.navigate(Routes.SCHEDULED) },
+                onOpenAutoreply = { navController.navigate(Routes.AUTOREPLY) },
             )
         }
         composable(Routes.BLOCKLIST) {
@@ -127,6 +140,9 @@ fun TindaNavGraph(
         }
         composable(Routes.SCHEDULED) {
             ScheduledListScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.AUTOREPLY) {
+            AutoReplyScreen(onBack = { navController.popBackStack() })
         }
     }
 }

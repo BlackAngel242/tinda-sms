@@ -156,4 +156,24 @@
     <string name="scheduled_failed">échec</string>
     <string name="settings_scheduled">SMS programmés</string>
     <string name="settings_scheduled_desc">Voir et annuler les envois différés</string>
+    <string name="settings_autoreply">Répondeur automatique</string>
+    <string name="settings_autoreply_desc">Répondre automatiquement aux SMS reçus</string>
+    <string name="diagnostic_events_title">Journal d\'événements</string>
+    <string name="diagnostic_events_desc">Chaque écran ouvert et chaque action importante est notée ici, sans contenu de message ni numéro. Exportez ce journal et envoyez-le au développeur pour un diagnostic à distance.</string>
+    <string name="diagnostic_events_export">Exporter le journal</string>
+    <string name="save">Enregistrer</string>
+    <string name="autoreply_title">Répondeur automatique</string>
+    <string name="autoreply_empty">Aucune règle. Ajoutez-en une pour répondre automatiquement.</string>
+    <string name="autoreply_edit_title">Règle de réponse</string>
+    <string name="autoreply_name">Nom de la règle</string>
+    <string name="autoreply_message">Message de réponse</string>
+    <string name="autoreply_window">Plage horaire</string>
+    <string name="autoreply_start">Début</string>
+    <string name="autoreply_end">Fin</string>
+    <string name="autoreply_days">Jours actifs</string>
+    <string name="autoreply_scope">Destinataires</string>
+    <string name="autoreply_scope_all">Tous les expéditeurs</string>
+    <string name="autoreply_scope_contacts">Contacts uniquement</string>
+    <string name="autoreply_scope_non_contacts">Hors contacts</string>
+    <string name="autoreply_cooldown">Délai entre deux réponses</string>
 </resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Journal d'événements (diagnostic à distance), dans les fichiers privés. -->
+    <files-path name="logs" path="." />
+</paths>

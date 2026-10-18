@@ -156,4 +156,24 @@
     <string name="scheduled_failed">failed</string>
     <string name="settings_scheduled">Scheduled SMS</string>
     <string name="settings_scheduled_desc">View and cancel deferred sends</string>
+    <string name="settings_autoreply">Auto-reply</string>
+    <string name="settings_autoreply_desc">Automatically reply to received SMS</string>
+    <string name="diagnostic_events_title">Event log</string>
+    <string name="diagnostic_events_desc">Every opened screen and important action is recorded here, without message content or numbers. Export this log and send it to the developer for remote diagnostics.</string>
+    <string name="diagnostic_events_export">Export log</string>
+    <string name="save">Save</string>
+    <string name="autoreply_title">Auto-reply</string>
+    <string name="autoreply_empty">No rules. Add one to reply automatically.</string>
+    <string name="autoreply_edit_title">Reply rule</string>
+    <string name="autoreply_name">Rule name</string>
+    <string name="autoreply_message">Reply message</string>
+    <string name="autoreply_window">Time window</string>
+    <string name="autoreply_start">Start</string>
+    <string name="autoreply_end">End</string>
+    <string name="autoreply_days">Active days</string>
+    <string name="autoreply_scope">Recipients</string>
+    <string name="autoreply_scope_all">All senders</string>
+    <string name="autoreply_scope_contacts">Contacts only</string>
+    <string name="autoreply_scope_non_contacts">Non-contacts</string>
+    <string name="autoreply_cooldown">Delay between two replies</string>
 </resources>

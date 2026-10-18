@@ -49,6 +49,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.VaultRepository
+import tech.dmampro.tinda.util.EventLog
 
 /** État du déverrouillage. */
 private enum class UnlockState { PIN_ENTRY, PIN_SETUP_1, PIN_SETUP_2 }
@@ -98,6 +99,7 @@ fun VaultUnlockScreen(
         scope.launch {
             val ok = viewModel.unlockWithPin(input)
             busy = false
+            EventLog.log(if (ok) "vault.unlock_pin_ok" else "vault.unlock_pin_fail")
             if (ok) {
                 onUnlocked()
             } else {
@@ -179,6 +181,7 @@ fun VaultUnlockScreen(
                         busy = true
                         val ok = viewModel.unlockWithBiometric()
                         busy = false
+                        EventLog.log(if (ok) "vault.unlock_bio_ok" else "vault.unlock_bio_fail")
                         if (ok) onUnlocked() else {
                             error = context.getString(R.string.vault_biometric_failed)
                         }

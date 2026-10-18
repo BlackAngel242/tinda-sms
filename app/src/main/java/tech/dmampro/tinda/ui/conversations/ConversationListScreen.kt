@@ -4,7 +4,8 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,6 +71,7 @@ import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.SwipeAction
 import tech.dmampro.tinda.data.local.HIGHLIGHT_END
 import tech.dmampro.tinda.data.local.HIGHLIGHT_START
+import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.util.TimeFormat
 
 /**
@@ -136,13 +138,22 @@ fun ConversationListScreen(
         },
         floatingActionButton = {
             // Entrée discrète du coffre secret : appui long sur le +.
-            // Aucun indice visible dans l'interface.
+            // Aucun indice visible dans l'interface. Le clic court utilise
+            // le onClick natif du FAB ; l'appui long est détecté par un
+            // pointerInput externe (pas de clickables imbriqués en conflit).
             FloatingActionButton(
-                onClick = {},
-                modifier = Modifier.combinedClickable(
-                    onClick = onNewMessageClick,
-                    onLongClick = onVaultLongPress,
-                ),
+                onClick = {
+                    EventLog.log("tap.fab_new_message")
+                    onNewMessageClick()
+                },
+                modifier = Modifier.pointerInput(onVaultLongPress) {
+                    detectTapGestures(
+                        onLongPress = {
+                            EventLog.log("tap.fab_vault_longpress")
+                            onVaultLongPress()
+                        },
+                    )
+                },
             ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_message))
             }

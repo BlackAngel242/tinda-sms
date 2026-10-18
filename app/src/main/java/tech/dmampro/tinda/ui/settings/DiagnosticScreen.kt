@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import tech.dmampro.tinda.R
+import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.util.RoleCheck
 import tech.dmampro.tinda.util.RoleDiagnostic
 import tech.dmampro.tinda.util.SendJournal
@@ -51,10 +53,12 @@ fun DiagnosticScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var checks by remember { mutableStateOf<List<RoleCheck>?>(null) }
     var journal by remember { mutableStateOf<List<SendJournal.Entry>>(emptyList()) }
+    var events by remember { mutableStateOf<List<EventLog.Event>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         checks = withContext(Dispatchers.Default) { RoleDiagnostic.run(context) }
         journal = withContext(Dispatchers.Default) { SendJournal.snapshot() }
+        events = withContext(Dispatchers.Default) { EventLog.snapshot().takeLast(50) }
     }
 
     Scaffold(
@@ -150,7 +154,84 @@ fun DiagnosticScreen(onBack: () -> Unit) {
                         }
                     }
                 }
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    stringResource(R.string.diagnostic_events_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.diagnostic_events_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { shareEventLog(context) }) {
+                    Text(stringResource(R.string.diagnostic_events_export))
+                }
+                Spacer(Modifier.height(8.dp))
+                if (events.isNotEmpty()) {
+                    LazyColumn {
+                        items(events) { event ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        event.name,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                },
+                                supportingContent = if (event.detail.isNotBlank()) {
+                                    {
+                                        Text(
+                                            event.detail,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                } else {
+                                    null
+                                },
+                                leadingContent = {
+                                    Text(
+                                        SendJournal.formatTime(event.time),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+/**
+ * Partage le fichier du journal d'événements (diagnostic à distance).
+ * Le fichier ne contient ni contenu de SMS, ni numéro, ni PIN.
+ */
+private fun shareEventLog(context: android.content.Context) {
+    val file = EventLog.file()
+    if (file == null) {
+        EventLog.log("eventlog.export_fail", "no_file")
+        return
+    }
+    EventLog.log("eventlog.export")
+    val uri = androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file,
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(android.content.Intent.EXTRA_STREAM, uri)
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(
+        android.content.Intent.createChooser(
+            intent,
+            context.getString(R.string.diagnostic_events_export),
+        ),
+    )
 }
