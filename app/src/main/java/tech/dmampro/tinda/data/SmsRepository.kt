@@ -43,7 +43,7 @@ class SmsRepository @Inject constructor(
 
     /** Vrai si Tinda est l'application SMS par défaut du système. */
     fun isDefaultSmsApp(): Boolean =
-        Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+        tech.dmampro.tinda.util.isDefaultSmsApp(context)
 
     /** Liste des conversations, rafraîchie à chaque [notifyChanged]. */
     fun observeConversations(): Flow<List<ConversationItem>> =

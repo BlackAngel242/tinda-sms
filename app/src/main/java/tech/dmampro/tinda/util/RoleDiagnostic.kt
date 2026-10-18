@@ -82,15 +82,17 @@ object RoleDiagnostic {
             detail = "Activité trouvée dans ${activities.size} candidat(s)",
         )
 
-        // 5. Statut actuel du rôle.
+        // 5. Statut actuel du rôle (vérification robuste : isRoleHeld d'abord,
+        //    car getDefaultSmsPackage() renvoie null sur certaines ROM).
+        val held = isDefaultSmsApp(context)
         val currentDefault = Telephony.Sms.getDefaultSmsPackage(context)
         out += RoleCheck(
             label = "Rôle détenu",
-            ok = currentDefault == pkg,
-            detail = if (currentDefault == pkg) {
+            ok = held,
+            detail = if (held) {
                 "Tinda est l'application SMS par défaut"
             } else {
-                "Application par défaut actuelle : $currentDefault"
+                "Application par défaut vue par le système : $currentDefault"
             },
         )
 

@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun isDefaultSmsApp(): Boolean =
-        Telephony.Sms.getDefaultSmsPackage(this) == packageName
+        tech.dmampro.tinda.util.isDefaultSmsApp(this)
 
     /**
      * Demande le rôle "application SMS par défaut" : RoleManager (API 29+)
