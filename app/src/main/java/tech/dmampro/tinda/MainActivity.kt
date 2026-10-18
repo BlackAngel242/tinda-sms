@@ -1,9 +1,13 @@
 package tech.dmampro.tinda
 
+import android.app.AlertDialog
 import android.app.role.RoleManager
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.provider.Telephony
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,13 +48,14 @@ class MainActivity : ComponentActivity() {
     /**
      * Demande le rôle "application SMS par défaut" : RoleManager (API 29+)
      * via createRequestRoleIntent (dialogue système), sinon l'intent
-     * historique. Le résultat se vérifie au retour (l'onboarding
-     * ré-interroge le rôle).
+     * historique. Si Android bloque ou ignore la demande (fréquent pour une
+     * app installée manuellement, paramètres restreints), on ne reste plus
+     * silencieux : on guide vers le réglage manuel.
      */
     private val requestRoleLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) {
-        // Rien à traiter ici : l'onboarding revérifie le rôle au retour.
+        if (!isDefaultSmsApp()) showRoleBlockedDialog()
     }
 
     private fun requestDefaultSmsRole() {
@@ -63,6 +68,9 @@ class MainActivity : ComponentActivity() {
                 requestRoleLauncher.launch(
                     roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS),
                 )
+            } else {
+                // Avant ce correctif : rien ne se passait ici, d'où le bouton muet.
+                showRoleBlockedDialog()
             }
         } else {
             startActivity(
@@ -70,6 +78,30 @@ class MainActivity : ComponentActivity() {
                     .putExtra(Telephony.Sms.Intents.EXTRA_PACKAGE_NAME, packageName),
             )
         }
+    }
+
+    /**
+     * Secours quand la demande de rôle est bloquée : explique le réglage
+     * manuel et ouvre directement l'écran des applications par défaut.
+     */
+    private fun showRoleBlockedDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.role_blocked_title)
+            .setMessage(R.string.role_blocked_message)
+            .setPositiveButton(R.string.role_blocked_open_settings) { _, _ ->
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS))
+                } catch (e: ActivityNotFoundException) {
+                    // ROM sans cet écran : on retombe sur la fiche de l'application.
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", packageName, null)
+                        },
+                    )
+                }
+            }
+            .setNegativeButton(R.string.role_blocked_later, null)
+            .show()
     }
 
     companion object {

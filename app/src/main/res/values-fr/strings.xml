@@ -40,4 +40,8 @@
     <string name="onboarding_refused_desc">Tinda ne pourra ni envoyer ni recevoir de SMS tant qu\'elle n\'est pas votre application SMS par défaut. Vous pouvez explorer l\'interface, mais la téléphonie restera inactive.</string>
     <string name="onboarding_retry">Réessayer</string>
     <string name="onboarding_continue_anyway">Continuer quand même</string>
+    <string name="role_blocked_title">Android a bloqué la demande</string>
+    <string name="role_blocked_message">Tinda a été installée manuellement : Android peut bloquer la demande automatique. Vous pouvez la définir vous-même : Réglages → Applications → Applications par défaut → Application SMS → Tinda.</string>
+    <string name="role_blocked_open_settings">Ouvrir les réglages</string>
+    <string name="role_blocked_later">Plus tard</string>
 </resources>

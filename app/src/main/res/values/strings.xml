@@ -40,4 +40,8 @@
     <string name="onboarding_refused_desc">Tinda cannot send or receive SMS until it is your default SMS app. You can explore the interface, but telephony stays inactive.</string>
     <string name="onboarding_retry">Retry</string>
     <string name="onboarding_continue_anyway">Continue anyway</string>
+    <string name="role_blocked_title">Android blocked the request</string>
+    <string name="role_blocked_message">Tinda was installed manually, so Android may block the automatic request. You can set it yourself: Settings → Apps → Default apps → SMS app → Tinda.</string>
+    <string name="role_blocked_open_settings">Open settings</string>
+    <string name="role_blocked_later">Later</string>
 </resources>
