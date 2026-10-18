@@ -1,0 +1,21 @@
+# Android / Gradle
+local.properties
+.idea/
+*.iml
+.gradle/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Keystore : jamais versionné
+*.jks
+*.keystore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Divers
+*.log

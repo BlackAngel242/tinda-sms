@@ -1,0 +1,13 @@
+<!-- Premier plan de l'icône : bulle de message stylisée avec un "T". Dessin original. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,22c-17.7,0 -32,13.4 -32,30s14.3,30 32,30c2.1,0 4.1,-0.2 6.1,-0.6L74,88l-2.5,-9.1c7.8,-5.4 12.5,-13.9 12.5,-23.4C84,38.4 71.7,22 54,22z" />
+    <path
+        android:fillColor="#0B6E5D"
+        android:pathData="M44,40h20v6H52v22h-8V46H44z" />
+</vector>

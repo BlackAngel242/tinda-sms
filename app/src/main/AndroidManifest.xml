@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest Tinda SMS (lot 0).
+  Rôle « default SMS app » : les 4 composants requis par Android sont déclarés,
+  TOUS avec android:exported explicite (obligatoire depuis API 31).
+  Périmètre SMS uniquement (DEC-002) : aucun traitement MMS.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- SMS -->
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <!-- Contacts (noms dans les conversations), démarrage, notifications, alarmes exactes, service de premier plan -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Pas de BILLING, pas de RECEIVE_MMS : périmètre SMS uniquement. -->
+
+    <application
+        android:name=".TindaApp"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:theme="@style/Theme.TindaSMS"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 1/4 : réception des SMS (default handler). -->
+        <receiver
+            android:name=".sms.SmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.SMS_DELIVER_ACTION" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 2/4 : STUB MMS. Nuance (DEC-002) : Android exige ce composant pour
+             lister l'app comme candidate « default SMS », même sans MMS.
+             Le stub ignore proprement : aucun traitement MMS, aucun code MMS. -->
+        <receiver
+            android:name=".sms.MmsStubReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_WAP_PUSH">
+            <intent-filter>
+                <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER_ACTION" />
+                <data android:mimeType="application/vnd.wap.mms-message" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 3/4 : réponse depuis la notification d'appel manqué. -->
+        <activity
+            android:name=".sms.RespondViaMessageActivity"
+            android:exported="true"
+            android:permission="android.permission.SEND_RESPOND_VIA_MESSAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.RESPOND_VIA_MESSAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="smsto" />
+            </intent-filter>
+        </activity>
+
+        <!-- 4/4 : composition d'un SMS depuis une autre app. -->
+        <activity
+            android:name=".sms.ComposeSmsActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SENDTO" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="smsto" />
+                <data android:scheme="sms" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>

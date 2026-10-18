@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tinda SMS</string>
+    <string name="conversations_title">Conversations</string>
+    <string name="conversation_title">Conversation</string>
+    <string name="settings_title">Settings</string>
+    <string name="empty_conversations">No conversations yet</string>
+    <string name="new_message">New message</string>
+</resources>
