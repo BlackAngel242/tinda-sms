@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -135,7 +137,15 @@ fun ConversationDetailScreen(
             )
         },
         bottomBar = {
-            Column(modifier = Modifier.padding(8.dp)) {
+            // Le champ de saisie doit rester au-dessus de la barre de
+            // navigation système (gestes ou boutons) et remonter
+            // au-dessus du clavier quand il s'ouvre.
+            Column(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(8.dp)
+            ) {
                 if (uiState.sendError) {
                     Text(
                         stringResource(R.string.status_failed),
