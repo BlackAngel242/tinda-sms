@@ -37,21 +37,31 @@ class SmsStatusReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     SmsSender.ACTION_SMS_SENT -> {
-                        SendJournal.log("accusé SMS_SENT : resultCode=$resultCode")
-                        if (resultCode == Activity.RESULT_OK) {
-                            repository.updateMessageStatus(token, MessageStatus.SENT)
-                        } else {
-                            // Code seul, aucune donnée personnelle (AGENTS.md).
-                            // Le code est aussi stocké : visible dans l'app au
-                            // toucher du message en échec (diagnostic terrain).
-                            TindaLogger.w(TAG, "échec d'envoi, code=$resultCode")
-                            repository.updateMessageStatus(token, MessageStatus.FAILED, resultCode)
+                        val rc = resultCode
+                        SendJournal.log("accusé SMS_SENT : resultCode=$rc")
+                        when (rc) {
+                            Activity.RESULT_OK, Activity.RESULT_CANCELED -> {
+                                // -1 : envoyé (AOSP). 0 : sur certaines ROM
+                                // (constaté sur HiOS), le SMS part bien mais
+                                // le résultat n'est pas positionné : le code
+                                // reste à sa valeur par défaut (0 = annulé).
+                                repository.updateMessageStatus(token, MessageStatus.SENT)
+                            }
+                            else -> {
+                                // Seuls les codes d'erreur documentés
+                                // (1 à 4) sont des échecs avérés. Code seul,
+                                // aucune donnée personnelle (AGENTS.md).
+                                TindaLogger.w(TAG, "échec d'envoi, code=$rc")
+                                repository.updateMessageStatus(token, MessageStatus.FAILED, rc)
+                            }
                         }
                     }
                     SmsSender.ACTION_SMS_DELIVERED -> {
-                        SendJournal.log("accusé SMS_DELIVERED : resultCode=$resultCode")
-                        // Un rapport perdu n'est pas un échec : on garde SENT.
-                        if (resultCode == Activity.RESULT_OK) {
+                        val rc = resultCode
+                        SendJournal.log("accusé SMS_DELIVERED : resultCode=$rc")
+                        // La réception de l'intent = l'opérateur confirme la
+                        // remise. On ne dégrade jamais vers l'échec ici.
+                        if (rc == Activity.RESULT_OK || rc == Activity.RESULT_CANCELED) {
                             repository.updateMessageStatus(token, MessageStatus.DELIVERED)
                         }
                     }
