@@ -83,6 +83,8 @@
     <string name="diagnostic_loading">Analyzing…</string>
     <string name="diagnostic_all_ok">All green: the phone sees Tinda correctly. If it still doesn\'t show up in the default SMS apps, the block comes from the system.</string>
     <string name="diagnostic_not_ok">A component is missing: the problem comes from the app, not the phone.</string>
+    <string name="diagnostic_journal_title">Send journal (last 60 steps)</string>
+    <string name="diagnostic_journal_empty">No send recorded yet. Send an SMS then come back here.</string>
     <string name="settings_gestures">Swipe gestures</string>
     <string name="settings_swipe_right">Swipe right</string>
     <string name="settings_swipe_left">Swipe left</string>

@@ -21,6 +21,7 @@ import tech.dmampro.tinda.data.local.Draft
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.TindaDatabase
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
 
@@ -110,6 +111,7 @@ class ConversationDetailViewModel @Inject constructor(
             try {
                 val address = repository.getThreadAddress(threadId)
                 if (address.isBlank() || !repository.isDefaultSmsApp()) {
+                    SendJournal.log("écran : envoi bloqué (pas appli par défaut ou adresse vide)")
                     _uiState.update { it.copy(sendError = true, sending = false) }
                     return@launch
                 }

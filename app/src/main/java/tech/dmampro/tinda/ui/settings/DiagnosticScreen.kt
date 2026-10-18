@@ -37,6 +37,7 @@ import kotlinx.coroutines.withContext
 import tech.dmampro.tinda.R
 import tech.dmampro.tinda.util.RoleCheck
 import tech.dmampro.tinda.util.RoleDiagnostic
+import tech.dmampro.tinda.util.SendJournal
 
 /**
  * Écran de diagnostic (paramètres avancés) : montre ce que le téléphone voit
@@ -49,9 +50,11 @@ import tech.dmampro.tinda.util.RoleDiagnostic
 fun DiagnosticScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var checks by remember { mutableStateOf<List<RoleCheck>?>(null) }
+    var journal by remember { mutableStateOf<List<SendJournal.Entry>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         checks = withContext(Dispatchers.Default) { RoleDiagnostic.run(context) }
+        journal = withContext(Dispatchers.Default) { SendJournal.snapshot() }
     }
 
     Scaffold(
@@ -113,6 +116,39 @@ fun DiagnosticScreen(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    stringResource(R.string.diagnostic_journal_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Spacer(Modifier.height(8.dp))
+                if (journal.isEmpty()) {
+                    Text(
+                        stringResource(R.string.diagnostic_journal_empty),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn {
+                        items(journal) { entry ->
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        entry.event,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                },
+                                leadingContent = {
+                                    Text(
+                                        SendJournal.formatTime(entry.time),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                },
+                            )
+                        }
+                    }
                 }
             }
         }

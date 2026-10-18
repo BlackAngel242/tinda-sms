@@ -46,6 +46,7 @@ import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
 
@@ -95,6 +96,7 @@ class NewConversationViewModel @Inject constructor(
             _uiState.update { it.copy(sending = true, sendError = false, addressError = false) }
             try {
                 if (!repository.isDefaultSmsApp()) {
+                    SendJournal.log("nouveau message : envoi bloqué (pas appli par défaut)")
                     _uiState.update { it.copy(sendError = true, sending = false) }
                     return@launch
                 }

@@ -83,6 +83,8 @@
     <string name="diagnostic_loading">Analyse en cours…</string>
     <string name="diagnostic_all_ok">Tout est vert : le téléphone voit correctement Tinda. Si elle n\'apparaît toujours pas dans les applis SMS par défaut, le blocage vient du système.</string>
     <string name="diagnostic_not_ok">Un composant est introuvable : le problème vient de l\'application, pas du téléphone.</string>
+    <string name="diagnostic_journal_title">Journal d\'envoi (60 dernières étapes)</string>
+    <string name="diagnostic_journal_empty">Aucun envoi enregistré pour le moment. Envoyez un SMS puis revenez ici.</string>
     <string name="settings_gestures">Gestes de balayage</string>
     <string name="settings_swipe_right">Balayage vers la droite</string>
     <string name="settings_swipe_left">Balayage vers la gauche</string>

@@ -16,21 +16,33 @@ import android.provider.Telephony
  * On lit donc aussi le réglage système brut, celui-là même qu'affiche
  * l'écran "Applications par défaut". Dès qu'une source dit oui, c'est oui.
  */
-fun isDefaultSmsApp(context: Context): Boolean {
+fun isDefaultSmsApp(context: Context): Boolean =
+    isDefaultSmsAppDetail(context).first
+
+/**
+ * Variante détaillée pour le journal de diagnostic : renvoie le verdict
+ * et la source qui l'a établi ("role", "telecom", "secure" ou "aucune").
+ */
+fun isDefaultSmsAppDetail(context: Context): Pair<Boolean, String> {
     // 1. RoleManager direct (API 29+) : source de vérité en AOSP.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         val roleManager = context.getSystemService(RoleManager::class.java)
-        if (roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true) return true
+        if (roleManager?.isRoleHeld(RoleManager.ROLE_SMS) == true) {
+            return true to "role"
+        }
     }
     // 2. API Téléphonie classique.
-    if (Telephony.Sms.getDefaultSmsPackage(context) == context.packageName) return true
+    if (Telephony.Sms.getDefaultSmsPackage(context) == context.packageName) {
+        return true to "telecom"
+    }
     // 3. Réglage système brut (lecture autorisée sans permission).
     //    Constante Settings.Secure.SMS_DEFAULT_APPLICATION cachée du SDK
     //    public : on utilise sa valeur littérale ("sms_default_application").
-    return try {
+    val viaSecure = try {
         Settings.Secure.getString(context.contentResolver, "sms_default_application") ==
             context.packageName
     } catch (e: Exception) {
         false
     }
+    return if (viaSecure) true to "secure" else false to "aucune"
 }

@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.TindaLogger
 import javax.inject.Inject
 
@@ -36,6 +37,7 @@ class SmsStatusReceiver : BroadcastReceiver() {
             try {
                 when (intent.action) {
                     SmsSender.ACTION_SMS_SENT -> {
+                        SendJournal.log("accusé SMS_SENT : resultCode=$resultCode")
                         if (resultCode == Activity.RESULT_OK) {
                             repository.updateMessageStatus(token, MessageStatus.SENT)
                         } else {
@@ -47,6 +49,7 @@ class SmsStatusReceiver : BroadcastReceiver() {
                         }
                     }
                     SmsSender.ACTION_SMS_DELIVERED -> {
+                        SendJournal.log("accusé SMS_DELIVERED : resultCode=$resultCode")
                         // Un rapport perdu n'est pas un échec : on garde SENT.
                         if (resultCode == Activity.RESULT_OK) {
                             repository.updateMessageStatus(token, MessageStatus.DELIVERED)

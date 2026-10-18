@@ -14,6 +14,7 @@ import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
 import tech.dmampro.tinda.data.local.TindaDatabase
+import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.TindaLogger
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -43,7 +44,10 @@ class SmsSender @Inject constructor(
         threadId: Long,
         deliveryReport: Boolean = true,
     ): SendResult = withContext(Dispatchers.IO) {
-        if (!repository.isDefaultSmsApp()) {
+        val (isDefault, source) = tech.dmampro.tinda.util.isDefaultSmsAppDetail(context)
+        SendJournal.log("send() : rôle par défaut=$isDefault (source=$source)")
+        if (!isDefault) {
+            SendJournal.log("send() : REFUSÉ, pas l'appli SMS par défaut")
             throw SecurityException("Envoi refusé : Tinda n'est pas la default SMS app")
         }
         val token = UUID.randomUUID().toString()
@@ -88,17 +92,19 @@ class SmsSender @Inject constructor(
             }
 
             // 3. Écriture dans le provider Sent (rôle default handler).
-            writeToSentProvider(address, body, subscriptionId)?.let { providerId ->
-                db.messageDao().updateProviderId(rowId, providerId)
-            }
+            val providerId = writeToSentProvider(address, body, subscriptionId)
+            SendJournal.log("send() : provider Sent id=$providerId")
+            providerId?.let { db.messageDao().updateProviderId(rowId, it) }
         } catch (e: Exception) {
             TindaLogger.e(TAG, "exception pendant l'envoi", e)
+            SendJournal.log("send() : EXCEPTION ${e.javaClass.simpleName}")
             db.messageDao().updateStatusAndFailureByToken(
                 token, MessageStatus.FAILED, FAILURE_EXCEPTION
             )
             repository.notifyChanged()
             throw e
         }
+        SendJournal.log("send() : appel radio OK, en attente des accusés")
         SendResult(token, parts.size)
     }
 
