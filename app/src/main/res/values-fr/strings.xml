@@ -16,6 +16,14 @@
     <string name="status_sent">Envoyé</string>
     <string name="status_delivered">Livré</string>
     <string name="status_failed">Échec d\'envoi</string>
+    <string name="send_fail_title">Pourquoi ce message est en échec</string>
+    <string name="send_fail_unknown">Cause inconnue. Le SMS a peut-être quand même été envoyé : vérifiez auprès du destinataire avant de renvoyer.</string>
+    <string name="send_fail_app">Erreur interne de l\'application pendant l\'envoi (code -1). Le SMS a peut-être quand même été envoyé : vérifiez auprès du destinataire avant de renvoyer.</string>
+    <string name="send_fail_generic">Le réseau a refusé l\'envoi (code 1). Le SMS a peut-être quand même été envoyé : vérifiez auprès du destinataire avant de renvoyer.</string>
+    <string name="send_fail_no_service">Pas de service réseau au moment de l\'envoi (code 2). Réessayez quand le signal revient.</string>
+    <string name="send_fail_invalid">Message rejeté car invalide (code 3).</string>
+    <string name="send_fail_radio_off">Radio coupée, probablement le mode avion (code 4). Désactivez-le et réessayez.</string>
+    <string name="ok">Compris</string>
     <string name="segments">%1$d/%2$d · %3$d segment(s)</string>
     <string name="yesterday">Hier</string>
     <string name="banner_not_default">Tinda n\'est pas votre application SMS par défaut</string>

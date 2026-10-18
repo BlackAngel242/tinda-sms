@@ -92,7 +92,10 @@ class SmsSender @Inject constructor(
                 db.messageDao().updateProviderId(rowId, providerId)
             }
         } catch (e: Exception) {
-            db.messageDao().updateStatusByToken(token, MessageStatus.FAILED)
+            TindaLogger.e(TAG, "exception pendant l'envoi", e)
+            db.messageDao().updateStatusAndFailureByToken(
+                token, MessageStatus.FAILED, FAILURE_EXCEPTION
+            )
             repository.notifyChanged()
             throw e
         }
@@ -149,6 +152,12 @@ class SmsSender @Inject constructor(
         const val ACTION_SMS_DELIVERED = "tech.dmampro.tinda.SMS_DELIVERED"
         const val EXTRA_TOKEN = "token"
         const val EXTRA_PART_INDEX = "part_index"
+        /**
+         * failureCode stocké quand l'envoi échoue par exception dans
+         * l'application (avant ou après l'appel radio), distinct des
+         * resultCode radio (1 à 4).
+         */
+        const val FAILURE_EXCEPTION = -1
         private val requestCodeCounter = AtomicInteger(0)
         private const val TAG = "SmsSender"
     }

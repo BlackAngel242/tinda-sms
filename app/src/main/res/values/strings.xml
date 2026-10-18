@@ -16,6 +16,14 @@
     <string name="status_sent">Sent</string>
     <string name="status_delivered">Delivered</string>
     <string name="status_failed">Send failed</string>
+    <string name="send_fail_title">Why this message failed</string>
+    <string name="send_fail_unknown">Unknown cause. The SMS may still have been sent: check with the recipient before resending.</string>
+    <string name="send_fail_app">Internal app error during sending (code -1). The SMS may still have been sent: check with the recipient before resending.</string>
+    <string name="send_fail_generic">The network refused to send (code 1). The SMS may still have been sent: check with the recipient before resending.</string>
+    <string name="send_fail_no_service">No network service when sending (code 2). Try again when the signal is back.</string>
+    <string name="send_fail_invalid">Message rejected as invalid (code 3).</string>
+    <string name="send_fail_radio_off">Radio off, probably airplane mode (code 4). Turn it off and try again.</string>
+    <string name="ok">Got it</string>
     <string name="segments">%1$d/%2$d · %3$d part(s)</string>
     <string name="yesterday">Yesterday</string>
     <string name="banner_not_default">Tinda is not your default SMS app</string>

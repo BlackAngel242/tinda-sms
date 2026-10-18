@@ -8,6 +8,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import tech.dmampro.tinda.data.local.FtsCallback
+import tech.dmampro.tinda.data.local.MIGRATION_3_4
 import tech.dmampro.tinda.data.local.TindaDatabase
 import javax.inject.Singleton
 
@@ -24,6 +25,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TindaDatabase =
         Room.databaseBuilder(context, TindaDatabase::class.java, "tinda.db")
+            .addMigrations(MIGRATION_3_4)
             .fallbackToDestructiveMigration()
             .addCallback(FtsCallback())
             .build()

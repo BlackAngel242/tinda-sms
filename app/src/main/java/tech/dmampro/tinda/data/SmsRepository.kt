@@ -251,8 +251,15 @@ class SmsRepository @Inject constructor(
 
     /** Met à jour le statut d'un message sortant (accusés d'envoi / livraison). */
     suspend fun updateMessageStatus(token: String, status: MessageStatus) =
+        updateMessageStatus(token, status, null)
+
+    /**
+     * Met à jour le statut d'un message sortant, avec le code d'échec
+     * éventuel (diagnostic visible dans l'app, jamais de contenu ni numéro).
+     */
+    suspend fun updateMessageStatus(token: String, status: MessageStatus, failureCode: Int?) =
         withContext(Dispatchers.IO) {
-            db.messageDao().updateStatusByToken(token, status)
+            db.messageDao().updateStatusAndFailureByToken(token, status, failureCode)
             // Best effort : reflète aussi le statut dans le provider système.
             try {
                 val row = db.messageDao().findByToken(token)

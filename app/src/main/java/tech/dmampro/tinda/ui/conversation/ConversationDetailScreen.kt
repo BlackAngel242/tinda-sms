@@ -1,5 +1,6 @@
 package tech.dmampro.tinda.ui.conversation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -29,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +67,7 @@ fun ConversationDetailScreen(
     val messages by viewModel.messages.collectAsState()
     val draft by viewModel.draftText.collectAsState()
     var simMenuOpen by remember { mutableStateOf(false) }
+    var failedMessage by remember { mutableStateOf<Message?>(null) }
     val listState = rememberLazyListState()
 
     // Toujours scroller vers le dernier message.
@@ -191,15 +195,27 @@ fun ConversationDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 items(messages, key = { it.id }) { message ->
-                    MessageBubble(message = message)
+                    MessageBubble(
+                        message = message,
+                        onFailedClick = { failedMessage = it },
+                    )
                 }
             }
         }
     }
+    failedMessage?.let { message ->
+        FailureDialog(
+            message = message,
+            onDismiss = { failedMessage = null },
+        )
+    }
 }
 
 @Composable
-private fun MessageBubble(message: Message) {
+private fun MessageBubble(
+    message: Message,
+    onFailedClick: (Message) -> Unit,
+) {
     val isIncoming = message.incoming
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -214,7 +230,17 @@ private fun MessageBubble(message: Message) {
             },
             modifier = Modifier.fillMaxWidth(0.8f),
         ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .let {
+                        if (!isIncoming && message.status == MessageStatus.FAILED) {
+                            it.clickable { onFailedClick(message) }
+                        } else {
+                            it
+                        }
+                    },
+            ) {
                 Text(
                     message.body,
                     style = MaterialTheme.typography.bodyMedium,
@@ -236,6 +262,32 @@ private fun MessageBubble(message: Message) {
             }
         }
     }
+}
+
+/** Dialogue de diagnostic : pourquoi ce message est en échec (toucher le ⚠️). */
+@Composable
+private fun FailureDialog(
+    message: Message,
+    onDismiss: () -> Unit,
+) {
+    val causeRes = when (message.failureCode) {
+        1 -> R.string.send_fail_generic
+        2 -> R.string.send_fail_no_service
+        3 -> R.string.send_fail_invalid
+        4 -> R.string.send_fail_radio_off
+        -1 -> R.string.send_fail_app
+        else -> R.string.send_fail_unknown
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.send_fail_title)) },
+        text = { Text(stringResource(causeRes)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.ok))
+            }
+        },
+    )
 }
 
 /** Icône de statut : envoi, envoyé, livré, échec. Jamais "lu" en SMS pur (RB-05). */

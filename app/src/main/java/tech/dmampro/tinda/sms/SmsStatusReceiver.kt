@@ -40,8 +40,10 @@ class SmsStatusReceiver : BroadcastReceiver() {
                             repository.updateMessageStatus(token, MessageStatus.SENT)
                         } else {
                             // Code seul, aucune donnée personnelle (AGENTS.md).
+                            // Le code est aussi stocké : visible dans l'app au
+                            // toucher du message en échec (diagnostic terrain).
                             TindaLogger.w(TAG, "échec d'envoi, code=$resultCode")
-                            repository.updateMessageStatus(token, MessageStatus.FAILED)
+                            repository.updateMessageStatus(token, MessageStatus.FAILED, resultCode)
                         }
                     }
                     SmsSender.ACTION_SMS_DELIVERED -> {

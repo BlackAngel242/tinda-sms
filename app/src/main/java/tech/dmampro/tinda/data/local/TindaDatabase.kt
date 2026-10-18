@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.Insert
+import androidx.room.migration.Migration
 import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
@@ -77,6 +78,13 @@ data class Message(
     val subscriptionId: Int = -1,
     /** Vrai uniquement pour les simulations locales (RB-03 : jamais dans le provider). */
     val simulated: Boolean = false,
+    /**
+     * Code d'échec du dernier envoi (resultCode radio : 1 générique, 2 sans
+     * service, 3 message invalide, 4 radio coupée ; -1 = exception dans
+     * l'app). Null = pas d'échec constaté. Diagnostic visible, jamais de
+     * contenu ni de numéro.
+     */
+    val failureCode: Int? = null,
 )
 
 /** Brouillon auto (F1) : clé "thread:<id>" ou "new". */
@@ -144,6 +152,9 @@ interface MessageDao {
 
     @Query("UPDATE messages SET status = :status WHERE token = :token")
     suspend fun updateStatusByToken(token: String, status: MessageStatus)
+
+    @Query("UPDATE messages SET status = :status, failureCode = :failureCode WHERE token = :token")
+    suspend fun updateStatusAndFailureByToken(token: String, status: MessageStatus, failureCode: Int?)
 
     @Query("UPDATE messages SET providerId = :providerId WHERE id = :id")
     suspend fun updateProviderId(id: Long, providerId: Long)
@@ -296,7 +307,7 @@ fun toFtsMatch(input: String): String {
         BlockEvent::class,
         ArchivedThread::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -307,4 +318,11 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun blockDao(): BlockDao
     abstract fun archiveDao(): ArchiveDao
     abstract fun searchDao(): SearchDao
+}
+
+/** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE messages ADD COLUMN failureCode INTEGER")
+    }
 }
