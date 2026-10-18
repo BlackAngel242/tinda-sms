@@ -23,6 +23,7 @@ import tech.dmampro.tinda.ui.vault.VaultUnlockScreen
 import tech.dmampro.tinda.ui.schedule.ScheduledListScreen
 import tech.dmampro.tinda.ui.autoreply.AutoReplyScreen
 import tech.dmampro.tinda.ui.forward.ForwardScreen
+import tech.dmampro.tinda.ui.groupsend.GroupSendScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -66,6 +67,7 @@ fun TindaNavGraph(
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
                 onVaultLongPress = { navController.navigate(Routes.VAULT_UNLOCK) },
+                onGroupSendClick = { navController.navigate(Routes.GROUP_SEND) },
             )
         }
         composable(Routes.NEW_CONVERSATION) {
@@ -148,6 +150,9 @@ fun TindaNavGraph(
         }
         composable(Routes.FORWARD) {
             ForwardScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.GROUP_SEND) {
+            GroupSendScreen(onBack = { navController.popBackStack() })
         }
     }
 }

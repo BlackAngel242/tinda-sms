@@ -16,6 +16,7 @@ object Routes {
     const val SCHEDULED = "scheduled"
     const val AUTOREPLY = "autoreply"
     const val FORWARD = "forward"
+    const val GROUP_SEND = "group_send"
 
     fun conversationDetail(threadId: Long) = "conversation/$threadId"
     fun vaultConversation(address: String) =

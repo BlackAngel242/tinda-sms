@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -86,6 +87,7 @@ fun ConversationListScreen(
     onSettingsClick: () -> Unit,
     onOpenOnboarding: () -> Unit,
     onVaultLongPress: () -> Unit = {},
+    onGroupSendClick: () -> Unit = {},
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val conversations by viewModel.conversations.collectAsState()
@@ -130,6 +132,17 @@ fun ConversationListScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.conversations_title)) },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            EventLog.log("tap.group_send_open")
+                            onGroupSendClick()
+                        },
+                    ) {
+                        Icon(
+                            Icons.Filled.Group,
+                            contentDescription = stringResource(R.string.groupsend_title),
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = null)
                     }

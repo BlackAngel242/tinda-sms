@@ -180,6 +180,14 @@
     <string name="forward_source_keyword">Keyword "%1$s"</string>
     <string name="forward_with_content">with text</string>
     <string name="forward_notify_only">notify only</string>
+    <string name="groupsend_title">Group send</string>
+    <string name="groupsend_recipients">Recipients (%1$d)</string>
+    <string name="groupsend_empty">Add numbers or pick contacts.</string>
+    <string name="groupsend_pick_contacts">Pick contacts</string>
+    <string name="groupsend_send">Send to all</string>
+    <string name="groupsend_summary">%1$d of %2$d sent</string>
+    <string name="groupsend_add_selected">Add (%1$d)</string>
+    <string name="loading">Loading…</string>
     <string name="save">Save</string>
     <string name="autoreply_title">Auto-reply</string>
     <string name="autoreply_empty">No rules. Add one to reply automatically.</string>
