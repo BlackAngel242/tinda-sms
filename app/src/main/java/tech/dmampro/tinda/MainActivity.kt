@@ -35,10 +35,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge() // Requis : edge-to-edge imposé à partir de targetSdk 35.
 
-        // Destination de départ : notification, onboarding, ou liste.
+        // Destination de départ : notification, coffre, onboarding, ou liste.
         val deepThread = intent.getLongExtra(EXTRA_OPEN_THREAD, -1L)
+        val openVault = intent.getBooleanExtra(EXTRA_OPEN_VAULT, false)
         val startDestination = when {
             deepThread >= 0 -> Routes.conversationDetail(deepThread)
+            openVault -> Routes.VAULT_UNLOCK
             isDefaultSmsApp() -> Routes.CONVERSATIONS
             else -> Routes.ONBOARDING
         }
@@ -130,5 +132,8 @@ class MainActivity : ComponentActivity() {
     companion object {
         /** Fil à ouvrir depuis une notification. */
         const val EXTRA_OPEN_THREAD = "open_thread"
+
+        /** Ouvre le déverrouillage du coffre (notification déguisée). */
+        const val EXTRA_OPEN_VAULT = "open_vault"
     }
 }

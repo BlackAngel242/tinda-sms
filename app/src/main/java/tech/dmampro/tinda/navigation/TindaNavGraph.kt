@@ -13,6 +13,10 @@ import tech.dmampro.tinda.ui.newmessage.NewConversationScreen
 import tech.dmampro.tinda.ui.settings.BlocklistScreen
 import tech.dmampro.tinda.ui.settings.DiagnosticScreen
 import tech.dmampro.tinda.ui.settings.SettingsScreen
+import tech.dmampro.tinda.ui.vault.VaultConversationScreen
+import tech.dmampro.tinda.ui.vault.VaultHomeScreen
+import tech.dmampro.tinda.ui.vault.VaultRulesScreen
+import tech.dmampro.tinda.ui.vault.VaultUnlockScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -47,6 +51,7 @@ fun TindaNavGraph(
                 onNewMessageClick = { navController.navigate(Routes.NEW_CONVERSATION) },
                 onSettingsClick = { navController.navigate(Routes.SETTINGS) },
                 onOpenOnboarding = { navController.navigate(Routes.ONBOARDING) },
+                onVaultLongPress = { navController.navigate(Routes.VAULT_UNLOCK) },
             )
         }
         composable(Routes.NEW_CONVERSATION) {
@@ -81,6 +86,42 @@ fun TindaNavGraph(
         }
         composable(Routes.DIAGNOSTIC) {
             DiagnosticScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.VAULT_UNLOCK) {
+            VaultUnlockScreen(
+                onUnlocked = {
+                    navController.navigate(Routes.VAULT_HOME) {
+                        popUpTo(Routes.VAULT_UNLOCK) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.VAULT_HOME) {
+            VaultHomeScreen(
+                onThreadClick = { address ->
+                    navController.navigate(Routes.vaultConversation(address))
+                },
+                onOpenRules = { navController.navigate(Routes.VAULT_RULES) },
+                onLock = {
+                    navController.navigate(Routes.CONVERSATIONS) {
+                        popUpTo(Routes.VAULT_HOME) { inclusive = true }
+                    }
+                },
+            )
+        }
+        composable(
+            route = Routes.VAULT_CONVERSATION,
+            arguments = listOf(navArgument("address") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val address = backStackEntry.arguments?.getString("address").orEmpty()
+            VaultConversationScreen(
+                address = address,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(Routes.VAULT_RULES) {
+            VaultRulesScreen(onBack = { navController.popBackStack() })
         }
     }
 }

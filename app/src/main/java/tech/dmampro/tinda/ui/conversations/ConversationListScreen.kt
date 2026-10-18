@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -82,6 +83,7 @@ fun ConversationListScreen(
     onNewMessageClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onOpenOnboarding: () -> Unit,
+    onVaultLongPress: () -> Unit = {},
     viewModel: ConversationListViewModel = hiltViewModel(),
 ) {
     val conversations by viewModel.conversations.collectAsState()
@@ -133,7 +135,15 @@ fun ConversationListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onNewMessageClick) {
+            // Entrée discrète du coffre secret : appui long sur le +.
+            // Aucun indice visible dans l'interface.
+            FloatingActionButton(
+                onClick = {},
+                modifier = Modifier.combinedClickable(
+                    onClick = onNewMessageClick,
+                    onLongClick = onVaultLongPress,
+                ),
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_message))
             }
         },

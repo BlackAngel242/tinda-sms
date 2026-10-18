@@ -75,4 +75,35 @@ object NotificationHelper {
     fun cancelThread(context: Context, threadId: Long) {
         context.getSystemService(NotificationManager::class.java)?.cancel(threadId.toInt())
     }
+
+    /**
+     * Notification déguisée du coffre secret : un message banal contenant
+     * la phrase de reconnaissance choisie par l'utilisateur. Ni l'expéditeur
+     * ni le contenu réel n'apparaissent. Le toucher ouvre le déverrouillage
+     * du coffre, jamais le message directement.
+     */
+    fun showDisguised(context: Context, disguisePhrase: String) {
+        if (!canNotify(context)) return
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra(MainActivity.EXTRA_OPEN_VAULT, true)
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val contentIntent = PendingIntent.getActivity(
+            context,
+            VAULT_DISGUISED_ID,
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, CHANNEL_MESSAGES)
+            .setSmallIcon(R.drawable.ic_notification_sms)
+            .setContentTitle(context.getString(R.string.app_name))
+            .setContentText(disguisePhrase)
+            .setContentIntent(contentIntent)
+            .setAutoCancel(true)
+            .build()
+        context.getSystemService(NotificationManager::class.java)
+            ?.notify(VAULT_DISGUISED_ID, notification)
+    }
+
+    private const val VAULT_DISGUISED_ID = 9012
 }

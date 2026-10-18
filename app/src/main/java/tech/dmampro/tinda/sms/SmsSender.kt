@@ -117,6 +117,30 @@ class SmsSender @Inject constructor(
         }
 
     /**
+     * Envoi depuis le coffre secret : appel radio uniquement, JAMAIS écrit
+     * dans le provider système (RB-01) ni dans la base principale. Pas de
+     * suivi de statut (aucun PendingIntent) : un appel radio qui ne lève
+     * pas d'exception vaut envoi. La trace reste dans la base chiffrée.
+     */
+    suspend fun sendVault(address: String, body: String): Unit = withContext(Dispatchers.IO) {
+        val (isDefault, _) = tech.dmampro.tinda.util.isDefaultSmsAppDetail(context)
+        if (!isDefault) throw SecurityException("Envoi refusé : Tinda n'est pas la default SMS app")
+        val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            context.getSystemService(SmsManager::class.java)!!
+        } else {
+            @Suppress("DEPRECATION")
+            SmsManager.getDefault()
+        }
+        val parts = smsManager.divideMessage(body)
+        if (parts.size <= 1) {
+            smsManager.sendTextMessage(address, null, body, null, null)
+        } else {
+            smsManager.sendMultipartTextMessage(address, null, parts, null, null)
+        }
+        SendJournal.log("sendVault() : appel radio OK (sans accusés, sans provider)")
+    }
+
+    /**
      * PendingIntent IMMUTABLE (obligatoire depuis API 31) vers notre receiver
      * interne (exported=false) : le système ne peut pas le détourner.
      */

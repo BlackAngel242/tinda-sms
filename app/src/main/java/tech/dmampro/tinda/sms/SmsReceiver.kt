@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.BlockRepository
 import tech.dmampro.tinda.data.SmsRepository
+import tech.dmampro.tinda.data.VaultRepository
 import tech.dmampro.tinda.notifications.NotificationHelper
 import tech.dmampro.tinda.util.TindaLogger
 import javax.inject.Inject
@@ -31,6 +32,9 @@ class SmsReceiver : BroadcastReceiver() {
 
     @Inject
     lateinit var blockRepository: BlockRepository
+
+    @Inject
+    lateinit var vaultRepository: VaultRepository
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -56,6 +60,27 @@ class SmsReceiver : BroadcastReceiver() {
                 if (blockRepository.isBlocked(address)) {
                     blockRepository.logBlockedEvent(address)
                     TindaLogger.i(TAG, "SMS bloqué par la liste noire")
+                    return@launch
+                }
+
+                // Coffre secret : liste jaune (numéro ou mot-clé). Le message
+                // va dans la base chiffrée, jamais dans le provider système
+                // (RB-01). Notification déguisée avec la phrase de
+                // reconnaissance, sans expéditeur ni contenu.
+                if (vaultRepository.matchesSecretRule(address, body)) {
+                    if (vaultRepository.ensureOpenForBackground()) {
+                        vaultRepository.storeIncoming(address, body, date)
+                        NotificationHelper.showDisguised(
+                            context, vaultRepository.getDisguisePhrase(),
+                        )
+                        TindaLogger.i(TAG, "SMS routé vers le coffre secret")
+                    } else {
+                        TindaLogger.w(TAG, "coffre indisponible, repli boîte normale")
+                        val threadId = repository.insertIncoming(address, body, date, subscriptionId)
+                        if (threadId < 0) return@launch
+                        val displayName = repository.resolveDisplayName(address)
+                        NotificationHelper.showMessage(context, threadId, displayName, body)
+                    }
                     return@launch
                 }
 

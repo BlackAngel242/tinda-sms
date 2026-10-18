@@ -121,6 +121,23 @@ data class ArchivedThread(
     val archivedAt: Long,
 )
 
+/**
+ * Règle de la liste jaune (coffre secret) : un numéro exact ou un mot-clé.
+ * Stockée dans la base principale (comme la liste noire) pour que le
+ * routage des SMS entrants fonctionne même coffre verrouillé. Seul le
+ * contenu des messages est chiffré ; ces règles sont des métadonnées de
+ * routage, jamais affichées hors du coffre.
+ */
+@Entity(tableName = "secret_rules")
+data class SecretRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** "NUMBER" ou "KEYWORD". */
+    val type: String,
+    /** Numéro normalisé ou mot-clé en minuscules. */
+    val value: String,
+    val addedAt: Long,
+)
+
 /** Résultat de recherche plein texte : extrait avec marqueurs de surlignage. */
 data class MessageSearchResult(
     @ColumnInfo(name = "messageId") val messageId: Long,
@@ -220,6 +237,21 @@ interface ArchiveDao {
     fun observeArchived(): Flow<List<ArchivedThread>>
 }
 
+@Dao
+interface SecretRuleDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(rule: SecretRule): Long
+
+    @Query("DELETE FROM secret_rules WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM secret_rules ORDER BY addedAt DESC")
+    fun observeAll(): Flow<List<SecretRule>>
+
+    @Query("SELECT * FROM secret_rules")
+    suspend fun getAll(): List<SecretRule>
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -306,8 +338,9 @@ fun toFtsMatch(input: String): String {
         BlockedNumber::class,
         BlockEvent::class,
         ArchivedThread::class,
+        SecretRule::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -318,11 +351,23 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun blockDao(): BlockDao
     abstract fun archiveDao(): ArchiveDao
     abstract fun searchDao(): SearchDao
+    abstract fun secretRuleDao(): SecretRuleDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
 val MIGRATION_3_4 = object : Migration(3, 4) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("ALTER TABLE messages ADD COLUMN failureCode INTEGER")
+    }
+}
+
+/** Migration 4 -> 5 : table secret_rules (liste jaune du coffre secret). */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS secret_rules (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "type TEXT NOT NULL, value TEXT NOT NULL, addedAt INTEGER NOT NULL)",
+        )
     }
 }
