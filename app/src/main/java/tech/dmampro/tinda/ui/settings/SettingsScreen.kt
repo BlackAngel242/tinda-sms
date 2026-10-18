@@ -64,6 +64,7 @@ fun SettingsScreen(
     onOpenScheduled: () -> Unit = {},
     onOpenAutoreply: () -> Unit = {},
     onOpenForward: () -> Unit = {},
+    onOpenAutodelete: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val themeId by viewModel.themeId.collectAsState(initial = "lagoon")
@@ -267,6 +268,26 @@ fun SettingsScreen(
                 ) {
                     Text(
                         stringResource(R.string.settings_forward_desc),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                    )
+                }
+            }
+            item {
+                SectionTitle(stringResource(R.string.settings_autodelete))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onOpenAutodelete)
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.settings_autodelete_desc),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )

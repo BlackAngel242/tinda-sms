@@ -217,6 +217,20 @@ data class ForwardLog(
     val sentAt: Long,
 )
 
+/** Règle de suppression automatique (lot 4). */
+@Entity(tableName = "auto_delete_rules")
+data class AutoDeleteRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val enabled: Boolean = true,
+    /** Adresse du fil concerné, "" = tous les fils. */
+    val threadAddress: String = "",
+    /** Supprime les messages plus vieux que ce nombre de jours. */
+    val olderThanDays: Int = 90,
+    /** Nombre minimal de messages récents à conserver par fil. */
+    val keepMinimum: Int = 20,
+)
+
 /** SMS programmé (F9) : envoi différé via WorkManager. */
 @Entity(tableName = "scheduled_messages")
 data class ScheduledMessage(
@@ -277,6 +291,23 @@ interface MessageDao {
 
     @Query("DELETE FROM messages WHERE threadId = :threadId")
     suspend fun deleteByThread(threadId: Long)
+
+    @Query("DELETE FROM messages WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("SELECT COUNT(*) FROM messages WHERE threadId = :threadId")
+    suspend fun countByThread(threadId: Long): Int
+
+    /**
+     * Messages candidats à la suppression auto : antérieurs à [cutoff],
+     * non simulés (les simulations ne sont jamais dans le provider),
+     * les plus récents d'abord par fil.
+     */
+    @Query(
+        "SELECT * FROM messages WHERE date < :cutoff AND simulated = 0 " +
+            "ORDER BY threadId ASC, date DESC, id DESC",
+    )
+    suspend fun getOlderThan(cutoff: Long): List<Message>
 }
 
 @Dao
@@ -435,6 +466,27 @@ interface ForwardDao {
     suspend fun cleanup(olderThan: Long)
 }
 
+@Dao
+interface AutoDeleteDao {
+    @Insert
+    suspend fun insert(rule: AutoDeleteRule): Long
+
+    @Update
+    suspend fun update(rule: AutoDeleteRule)
+
+    @Query("DELETE FROM auto_delete_rules WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT * FROM auto_delete_rules WHERE enabled = 1 ORDER BY id ASC")
+    suspend fun getEnabled(): List<AutoDeleteRule>
+
+    @Query("SELECT * FROM auto_delete_rules ORDER BY id ASC")
+    fun observeAll(): Flow<List<AutoDeleteRule>>
+
+    @Query("UPDATE auto_delete_rules SET enabled = :enabled WHERE id = :id")
+    suspend fun setEnabled(id: Long, enabled: Boolean)
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -527,8 +579,9 @@ fun toFtsMatch(input: String): String {
         AutoReplyState::class,
         ForwardRule::class,
         ForwardLog::class,
+        AutoDeleteRule::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -544,6 +597,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun autoReplyDao(): AutoReplyDao
     abstract fun autoReplyStateDao(): AutoReplyStateDao
     abstract fun forwardDao(): ForwardDao
+    abstract fun autoDeleteDao(): AutoDeleteDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -612,6 +666,19 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
                 "ruleId INTEGER NOT NULL, address TEXT NOT NULL, " +
                 "sentAt INTEGER NOT NULL, " +
                 "PRIMARY KEY (ruleId, address, sentAt))",
+        )
+    }
+}
+
+/** Migration 8 -> 9 : table des règles de suppression auto (lot 4). */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS auto_delete_rules (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "name TEXT NOT NULL, enabled INTEGER NOT NULL, " +
+                "threadAddress TEXT NOT NULL, olderThanDays INTEGER NOT NULL, " +
+                "keepMinimum INTEGER NOT NULL)",
         )
     }
 }

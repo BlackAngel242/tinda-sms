@@ -17,6 +17,7 @@ object Routes {
     const val AUTOREPLY = "autoreply"
     const val FORWARD = "forward"
     const val GROUP_SEND = "group_send"
+    const val AUTODELETE = "autodelete"
 
     fun conversationDetail(threadId: Long) = "conversation/$threadId"
     fun vaultConversation(address: String) =

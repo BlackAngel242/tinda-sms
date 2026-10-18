@@ -24,6 +24,7 @@ import tech.dmampro.tinda.ui.schedule.ScheduledListScreen
 import tech.dmampro.tinda.ui.autoreply.AutoReplyScreen
 import tech.dmampro.tinda.ui.forward.ForwardScreen
 import tech.dmampro.tinda.ui.groupsend.GroupSendScreen
+import tech.dmampro.tinda.ui.autodelete.AutoDeleteScreen
 
 /**
  * Graphe de navigation principal (lot 1 : onboarding + vraie téléphonie).
@@ -98,6 +99,7 @@ fun TindaNavGraph(
                 onOpenScheduled = { navController.navigate(Routes.SCHEDULED) },
                 onOpenAutoreply = { navController.navigate(Routes.AUTOREPLY) },
                 onOpenForward = { navController.navigate(Routes.FORWARD) },
+                onOpenAutodelete = { navController.navigate(Routes.AUTODELETE) },
             )
         }
         composable(Routes.BLOCKLIST) {
@@ -153,6 +155,9 @@ fun TindaNavGraph(
         }
         composable(Routes.GROUP_SEND) {
             GroupSendScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.AUTODELETE) {
+            AutoDeleteScreen(onBack = { navController.popBackStack() })
         }
     }
 }

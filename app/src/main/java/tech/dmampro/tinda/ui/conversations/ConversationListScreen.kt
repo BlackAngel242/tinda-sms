@@ -3,9 +3,16 @@ package tech.dmampro.tinda.ui.conversations
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +38,6 @@ import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -151,24 +157,39 @@ fun ConversationListScreen(
         },
         floatingActionButton = {
             // Entrée discrète du coffre secret : appui long sur le +.
-            // Aucun indice visible dans l'interface. Le clic court utilise
-            // le onClick natif du FAB ; l'appui long est détecté par un
-            // pointerInput externe (pas de clickables imbriqués en conflit).
-            FloatingActionButton(
-                onClick = {
-                    EventLog.log("tap.fab_new_message")
-                    onNewMessageClick()
-                },
-                modifier = Modifier.pointerInput(onVaultLongPress) {
-                    detectTapGestures(
-                        onLongPress = {
+            // Aucun indice visible dans l'interface.
+            //
+            // IMPORTANT : le FloatingActionButton de Material3 ajoute son
+            // propre clickable EN DESSOUS du modifier passé en paramètre, et
+            // ce clickable consomme l'appui avant tout détecteur externe :
+            // l'appui long n'arrivait donc jamais. Le bouton est reconstruit
+            // ici avec UN SEUL combinedClickable (clic court + appui long
+            // désambiguïsés correctement), sans clickable imbriqué.
+            val haptics = LocalHapticFeedback.current
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .shadow(6.dp, CircleShape)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer)
+                    .combinedClickable(
+                        onClick = {
+                            EventLog.log("tap.fab_new_message")
+                            onNewMessageClick()
+                        },
+                        onLongClick = {
                             EventLog.log("tap.fab_vault_longpress")
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             onVaultLongPress()
                         },
-                    )
-                },
+                    ),
+                contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_message))
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.new_message),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
         },
     ) { innerPadding ->

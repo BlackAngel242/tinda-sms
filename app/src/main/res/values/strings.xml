@@ -188,6 +188,17 @@
     <string name="groupsend_summary">%1$d of %2$d sent</string>
     <string name="groupsend_add_selected">Add (%1$d)</string>
     <string name="loading">Loading…</string>
+    <string name="settings_autodelete">Auto-delete</string>
+    <string name="settings_autodelete_desc">Delete old messages on a schedule</string>
+    <string name="autodelete_title">Auto-delete</string>
+    <string name="autodelete_warning">Warning: deleted messages are gone for good, from the app and the phone.</string>
+    <string name="autodelete_empty">No rules. Nothing is deleted without an active rule.</string>
+    <string name="autodelete_edit_title">Deletion rule</string>
+    <string name="autodelete_name">Rule name</string>
+    <string name="autodelete_thread_hint">Thread number (empty = all threads)</string>
+    <string name="autodelete_older_than">Older than (days)</string>
+    <string name="autodelete_keep">Keep at least</string>
+    <string name="autodelete_summary">Deletes after %1$d days, keeps %2$d recent</string>
     <string name="save">Save</string>
     <string name="autoreply_title">Auto-reply</string>
     <string name="autoreply_empty">No rules. Add one to reply automatically.</string>

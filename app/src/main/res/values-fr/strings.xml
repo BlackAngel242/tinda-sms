@@ -188,6 +188,17 @@
     <string name="groupsend_summary">%1$d sur %2$d envoyés</string>
     <string name="groupsend_add_selected">Ajouter (%1$d)</string>
     <string name="loading">Chargement…</string>
+    <string name="settings_autodelete">Suppression automatique</string>
+    <string name="settings_autodelete_desc">Supprimer les vieux messages selon des règles</string>
+    <string name="autodelete_title">Suppression automatique</string>
+    <string name="autodelete_warning">Attention : les messages supprimés le sont définitivement, dans l\'appli et dans le téléphone.</string>
+    <string name="autodelete_empty">Aucune règle. La suppression ne touche rien sans règle active.</string>
+    <string name="autodelete_edit_title">Règle de suppression</string>
+    <string name="autodelete_name">Nom de la règle</string>
+    <string name="autodelete_thread_hint">Numéro du fil (vide = tous les fils)</string>
+    <string name="autodelete_older_than">Plus vieux que (jours)</string>
+    <string name="autodelete_keep">Garder au moins</string>
+    <string name="autodelete_summary">Supprime après %1$d jours, garde %2$d récents</string>
     <string name="save">Enregistrer</string>
     <string name="autoreply_title">Répondeur automatique</string>
     <string name="autoreply_empty">Aucune règle. Ajoutez-en une pour répondre automatiquement.</string>

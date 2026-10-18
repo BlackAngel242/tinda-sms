@@ -21,6 +21,9 @@ class BootReceiver : BroadcastReceiver() {
     @Inject
     lateinit var scheduler: ScheduledSmsManager
 
+    @Inject
+    lateinit var autoDeleteManager: AutoDeleteManager
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -33,7 +36,8 @@ class BootReceiver : BroadcastReceiver() {
         scope.launch {
             try {
                 scheduler.reschedulePending()
-                TindaLogger.i(TAG, "SMS programmés replanifiés après démarrage")
+                autoDeleteManager.reschedule()
+                TindaLogger.i(TAG, "travaux replanifiés après démarrage")
             } finally {
                 pending.finish()
             }

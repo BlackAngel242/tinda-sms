@@ -13,6 +13,7 @@ import tech.dmampro.tinda.data.local.MIGRATION_4_5
 import tech.dmampro.tinda.data.local.MIGRATION_5_6
 import tech.dmampro.tinda.data.local.MIGRATION_6_7
 import tech.dmampro.tinda.data.local.MIGRATION_7_8
+import tech.dmampro.tinda.data.local.MIGRATION_8_9
 import tech.dmampro.tinda.data.local.TindaDatabase
 import javax.inject.Singleton
 
@@ -29,7 +30,10 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TindaDatabase =
         Room.databaseBuilder(context, TindaDatabase::class.java, "tinda.db")
-            .addMigrations(MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            .addMigrations(
+                MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+                MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+            )
             .fallbackToDestructiveMigration()
             .addCallback(FtsCallback())
             .build()

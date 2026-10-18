@@ -1,5 +1,7 @@
 package tech.dmampro.tinda.ui.newmessage
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,10 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -29,6 +33,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -128,6 +133,15 @@ fun NewConversationScreen(
     val uiState by viewModel.uiState.collectAsState()
     var address by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    // Sélecteur de contact natif : remplit le destinataire.
+    val pickContact = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickContact(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        address = readContactNumber(context, uri) ?: address
+    }
 
     Scaffold(
         topBar = {
@@ -158,6 +172,15 @@ fun NewConversationScreen(
                 supportingText = {
                     if (uiState.addressError) Text(stringResource(R.string.recipient_error))
                 },
+                trailingIcon = {
+                    IconButton(onClick = { pickContact.launch(null) }) {
+                        Icon(
+                            Icons.Filled.Contacts,
+                            contentDescription = stringResource(R.string.groupsend_pick_contacts),
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
             if (uiState.sims.size > 1) {
@@ -179,6 +202,7 @@ fun NewConversationScreen(
                 value = body,
                 onValueChange = { body = it },
                 label = { Text(stringResource(R.string.message_hint)) },
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
@@ -203,5 +227,37 @@ fun NewConversationScreen(
                 )
             }
         }
+    }
+}
+
+/**
+ * Lit le numéro de téléphone d'un contact choisi via le sélecteur natif.
+ * Retourne null si aucun numéro trouvé (contact sans numéro, par exemple).
+ */
+private fun readContactNumber(context: android.content.Context, uri: android.net.Uri): String? {
+    return try {
+        context.contentResolver.query(
+            uri,
+            arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+            null, null, null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                cursor.getString(0)?.trim()?.takeIf { it.isNotBlank() }
+            } else {
+                // Le sélecteur a renvoyé le contact sans ses numéros :
+                // on cherche le premier numéro de ce contact.
+                val contactId = uri.lastPathSegment ?: return null
+                context.contentResolver.query(
+                    android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+                    "${android.provider.ContactsContract.CommonDataKinds.Phone.CONTACT_ID}=?",
+                    arrayOf(contactId), null,
+                )?.use { phones ->
+                    if (phones.moveToFirst()) phones.getString(0)?.trim() else null
+                }
+            }
+        }
+    } catch (e: SecurityException) {
+        null
     }
 }
