@@ -44,4 +44,59 @@
     <string name="role_blocked_message">Tinda a été installée manuellement : Android peut bloquer la demande automatique. Vous pouvez la définir vous-même : Réglages → Applications → Applications par défaut → Application SMS → Tinda.</string>
     <string name="role_blocked_open_settings">Ouvrir les réglages</string>
     <string name="role_blocked_later">Plus tard</string>
+    <!-- Lot 2 : thèmes (F4) -->
+    <string name="theme_lagoon">Lagune</string>
+    <string name="theme_sahel">Sahel</string>
+    <string name="theme_fleuve">Fleuve</string>
+    <string name="theme_baobab">Baobab</string>
+    <string name="theme_nuit">Nuit</string>
+    <string name="theme_orchidee">Orchidée</string>
+    <!-- Lot 2 : paramètres -->
+    <string name="settings_appearance">Apparence</string>
+    <string name="settings_display_mode">Affichage</string>
+    <string name="settings_mode_system">Système</string>
+    <string name="settings_mode_light">Clair</string>
+    <string name="settings_mode_dark">Sombre</string>
+    <string name="settings_dynamic_color">Couleurs dynamiques</string>
+    <string name="settings_sound">Son d\'envoi</string>
+    <string name="settings_sound_enabled">Jouer un son à l\'envoi</string>
+    <string name="settings_sound_volume">Volume</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_system">Système</string>
+    <string name="settings_language_french">Français</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_system_note">Sur cette version d\'Android, la langue suit celle du système.</string>
+    <string name="settings_blocklist">Liste noire</string>
+    <string name="settings_blocklist_desc">Numéros bloqués et journal des blocages</string>
+    <string name="settings_advanced">Options avancées</string>
+    <string name="settings_gestures">Gestes de balayage</string>
+    <string name="settings_swipe_right">Balayage vers la droite</string>
+    <string name="settings_swipe_left">Balayage vers la gauche</string>
+    <string name="settings_gesture_action">Action du geste</string>
+    <string name="settings_archived">Conversations archivées (%d)</string>
+    <string name="settings_archived_empty">Aucune conversation archivée.</string>
+    <string name="settings_unarchive">Désarchiver</string>
+    <!-- Lot 2 : actions de geste (F5) -->
+    <string name="action_reply">Répondre</string>
+    <string name="action_archive">Archiver</string>
+    <string name="action_delete">Supprimer</string>
+    <string name="action_call">Appeler</string>
+    <!-- Lot 2 : recherche (F3) -->
+    <string name="search_hint">Rechercher dans les SMS</string>
+    <string name="search_no_results">Aucun résultat pour « %1$s ».</string>
+    <!-- Lot 2 : liste noire (F7) -->
+    <string name="blocklist_title">Liste noire</string>
+    <string name="blocklist_add_hint">Numéro à bloquer</string>
+    <string name="blocklist_add">Bloquer</string>
+    <string name="blocklist_numbers">Numéros bloqués (%d)</string>
+    <string name="blocklist_empty">Aucun numéro bloqué.</string>
+    <string name="blocklist_unblock">Débloquer</string>
+    <string name="blocklist_journal">Journal des blocages</string>
+    <string name="blocklist_journal_desc">Événements uniquement : numéro et date, jamais le contenu.</string>
+    <string name="blocklist_journal_empty">Aucun SMS bloqué pour le moment.</string>
+    <!-- Lot 2 : suppression d'un fil -->
+    <string name="delete_thread_title">Supprimer la conversation ?</string>
+    <string name="delete_thread_message">Supprimer définitivement la conversation avec %1$s ? Cette action est irréversible.</string>
+    <string name="delete_confirm">Supprimer</string>
+    <string name="cancel">Annuler</string>
 </resources>

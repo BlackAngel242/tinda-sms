@@ -7,6 +7,7 @@ object Routes {
     const val CONVERSATION_DETAIL = "conversation/{threadId}"
     const val NEW_CONVERSATION = "new_conversation"
     const val SETTINGS = "settings"
+    const val BLOCKLIST = "blocklist"
 
     fun conversationDetail(threadId: Long) = "conversation/$threadId"
 }

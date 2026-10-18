@@ -41,7 +41,7 @@ app/src/main/java/tech/dmampro/tinda/
   navigation/            # Routes + NavGraph
   ui/conversations/      # Liste des conversations (lot 1 : données réelles)
   ui/conversation/       # Fil de discussion (lot 1)
-  ui/settings/           # Paramètres (lots suivants)
+  ui/settings/           # Paramètres : thèmes, gestes, son, liste noire (lot 2)
   sms/                   # Receivers + activités du rôle « default SMS app »
   data/local/            # Room + chiffrement du coffre (SQLCipher, lot 4)
   util/                  # Logger sans PII
@@ -73,3 +73,22 @@ sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
    est toujours là.
 8. **Message long** : envoyer un texte de 200 caractères ; vérifier le
    compteur « 2 segments » et la bonne réception en un seul SMS.
+
+## Tests terrain (lot 2) — checklist pour SmokeSama
+
+1. **Recherche** : taper un mot dans la barre de recherche ; vérifier les
+   résultats avec passages surlignés ; ouvrir un résultat (bon fil affiché).
+2. **Thèmes** : Paramètres → choisir chacun des 6 thèmes ; vérifier
+   l'aperçu instantané ; basculer clair/sombre/système.
+3. **Gestes** : balayer une conversation à droite (répondre par défaut) et à
+   gauche (archiver par défaut) ; changer les actions dans Paramètres →
+   Options avancées → Gestes ; vérifier l'archive puis le désarchivage.
+4. **Son d'envoi** : envoyer un SMS ; entendre le carillon ; le couper dans
+   les paramètres ; régler le volume.
+5. **Liste noire** : Paramètres → Liste noire → bloquer son propre deuxième
+   numéro ; s'envoyer un SMS depuis ce numéro ; vérifier l'absence de
+   notification et la ligne dans le journal ; débloquer.
+6. **Suppression** : configurer le geste « supprimer », balayer, confirmer ;
+   vérifier la disparition du fil.
+7. **Langue** : passer l'interface en anglais puis revenir au français
+   (Android 13+ ; en dessous, suit le système).

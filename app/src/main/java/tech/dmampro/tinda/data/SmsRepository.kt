@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
+import tech.dmampro.tinda.data.local.ArchivedThread
 import tech.dmampro.tinda.data.local.Conversation
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
@@ -25,7 +26,8 @@ import javax.inject.Singleton
 
 /**
  * Accès aux SMS : le provider système est la source pour la liste,
- * Room est le miroir applicatif observé par l'UI (prépare la recherche du lot 2).
+ * Room est le miroir applicatif observé par l'UI (et indexé pour la
+ * recherche plein texte du lot 2).
  *
  * Règle absolue : jamais de contenu ni de numéro dans les logs (AGENTS.md).
  * Les écritures dans le provider n'ont lieu que si Tinda est la default SMS app.
@@ -34,6 +36,7 @@ import javax.inject.Singleton
 class SmsRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val db: TindaDatabase,
+    private val prefs: PrefsRepository,
 ) {
     private val refreshSignal = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
     private val nameCache = mutableMapOf<String, String>()
@@ -60,10 +63,62 @@ class SmsRepository @Inject constructor(
     }
 
     /**
-     * Re-synchronise la liste des conversations depuis le provider
-     * (point d'extension : l'indexation recherche du lot 2 s'y branchera).
+     * Re-synchronise la liste des conversations depuis le provider, puis
+     * remplit le miroir Room + l'index FTS (recherche plein texte, lot 2).
+     * Le remplissage complet est limité (100 fils récents, 3000 messages par
+     * fil) et relancé au plus une fois par jour, le reste étant tenu à jour
+     * par les triggers FTS.
      */
     suspend fun syncConversations() {
+        notifyChanged()
+        backfillSearchIndex()
+    }
+
+    private suspend fun backfillSearchIndex() = withContext(Dispatchers.IO) {
+        try {
+            val last = prefs.getLastFtsBackfill()
+            val fresh = System.currentTimeMillis() - last < BACKFILL_INTERVAL_MILLIS
+            if (fresh && db.searchDao().ftsCount() > 0) return@withContext
+            for (threadId in queryRecentThreadIds(BACKFILL_THREADS)) {
+                db.messageDao().insertAllIgnore(queryThreadMessages(threadId, BACKFILL_PER_THREAD))
+            }
+            prefs.setLastFtsBackfill(System.currentTimeMillis())
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "remplissage FTS sans permission SMS")
+        }
+    }
+
+    /** Archive ou désarchive un fil (F5). */
+    suspend fun setThreadArchived(threadId: Long, archived: Boolean) =
+        withContext(Dispatchers.IO) {
+            if (archived) {
+                val address = getThreadAddress(threadId)
+                db.archiveDao().archive(
+                    ArchivedThread(threadId, address, System.currentTimeMillis()),
+                )
+            } else {
+                db.archiveDao().unarchive(threadId)
+            }
+            notifyChanged()
+        }
+
+    /** Fils archivés, pour l'écran des paramètres. */
+    fun observeArchivedThreads(): Flow<List<ArchivedThread>> =
+        db.archiveDao().observeArchived()
+
+    /** Supprime un fil : provider système + miroir local (F5). */
+    suspend fun deleteThread(threadId: Long) = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.delete(
+                Telephony.Sms.CONTENT_URI,
+                "${Telephony.Sms.THREAD_ID} = ?",
+                arrayOf(threadId.toString()),
+            )
+        } catch (e: SecurityException) {
+            TindaLogger.w(TAG, "deleteThread sans permission d'écriture SMS")
+        }
+        db.messageDao().deleteByThread(threadId)
+        db.archiveDao().unarchive(threadId)
         notifyChanged()
     }
 
@@ -168,6 +223,8 @@ class SmsRepository @Inject constructor(
                 ),
             )
             db.conversationDao().upsertAll(listOf(conversationEntity(tid, address, body, dateMillis, unread = 1)))
+            // Un nouveau message désarchive le fil (comportement attendu).
+            db.archiveDao().unarchive(tid)
             tid
         } catch (e: SecurityException) {
             TindaLogger.w(TAG, "insertIncoming sans permission d'écriture SMS")
@@ -233,22 +290,26 @@ class SmsRepository @Inject constructor(
         val unread: Int,
     )
 
-    private fun loadConversations(): List<ConversationItem> {
+    private suspend fun loadConversations(): List<ConversationItem> {
         val rows = try {
             queryThreads()
         } catch (e: SecurityException) {
             TindaLogger.w(TAG, "lecture conversations sans permission SMS")
             return emptyList()
         }
-        return rows.map { row ->
-            ConversationItem(
-                threadId = row.threadId,
-                displayName = runCatching { lookupNameSync(row.address) }.getOrDefault(row.address),
-                snippet = row.snippet,
-                date = row.date,
-                unread = row.unread > 0,
-            )
-        }
+        val archived = db.archiveDao().archivedIds().toSet()
+        return rows
+            .filter { it.threadId !in archived }
+            .map { row ->
+                ConversationItem(
+                    threadId = row.threadId,
+                    address = row.address,
+                    displayName = runCatching { lookupNameSync(row.address) }.getOrDefault(row.address),
+                    snippet = row.snippet,
+                    date = row.date,
+                    unread = row.unread > 0,
+                )
+            }
     }
 
     /** Une seule requête groupée en mémoire : premier message = extrait, compte des non-lus. */
@@ -288,7 +349,7 @@ class SmsRepository @Inject constructor(
         return rows.values.map { it.copy(unread = unread[it.threadId] ?: 0) }
     }
 
-    private fun queryThreadMessages(threadId: Long): List<Message> {
+    private fun queryThreadMessages(threadId: Long, limit: Int? = null): List<Message> {
         val out = mutableListOf<Message>()
         val projection = arrayOf(
             Telephony.Sms._ID,
@@ -301,10 +362,15 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.STATUS,
             Telephony.Sms.SUBSCRIPTION_ID,
         )
+        val sortOrder = if (limit != null) {
+            Telephony.Sms.DATE + " ASC LIMIT " + limit
+        } else {
+            Telephony.Sms.DATE + " ASC"
+        }
         context.contentResolver.query(
             Telephony.Sms.CONTENT_URI, projection,
             "${Telephony.Sms.THREAD_ID} = ?", arrayOf(threadId.toString()),
-            "${Telephony.Sms.DATE} ASC",
+            sortOrder,
         )?.use { c ->
             val iId = c.getColumnIndexOrThrow(Telephony.Sms._ID)
             val iAddress = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
@@ -337,6 +403,23 @@ class SmsRepository @Inject constructor(
             }
         }
         return out
+    }
+
+    /** Identifiants des fils les plus récents (pour le remplissage FTS). */
+    private fun queryRecentThreadIds(limit: Int): List<Long> {
+        val seen = linkedSetOf<Long>()
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI,
+            arrayOf(Telephony.Sms.THREAD_ID),
+            null, null,
+            "${Telephony.Sms.DATE} DESC",
+        )?.use { c ->
+            val iThread = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            while (c.moveToNext() && seen.size < limit) {
+                seen.add(c.getLong(iThread))
+            }
+        }
+        return seen.toList()
     }
 
     private fun lookupNameSync(address: String): String {
@@ -376,5 +459,10 @@ class SmsRepository @Inject constructor(
 
     companion object {
         private const val TAG = "SmsRepository"
+
+        /** Remplissage de l'index FTS : 100 fils récents, 3000 messages par fil, 1 fois par jour. */
+        private const val BACKFILL_THREADS = 100
+        private const val BACKFILL_PER_THREAD = 3000
+        private const val BACKFILL_INTERVAL_MILLIS = 24L * 60L * 60L * 1000L
     }
 }

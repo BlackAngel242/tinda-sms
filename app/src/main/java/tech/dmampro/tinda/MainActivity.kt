@@ -13,13 +13,23 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import dagger.hilt.android.AndroidEntryPoint
+import tech.dmampro.tinda.data.PrefsRepository
 import tech.dmampro.tinda.navigation.Routes
 import tech.dmampro.tinda.navigation.TindaNavGraph
+import tech.dmampro.tinda.theme.ThemeMode
 import tech.dmampro.tinda.theme.TindaTheme
+import tech.dmampro.tinda.theme.themeById
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var prefs: PrefsRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,7 +43,20 @@ class MainActivity : ComponentActivity() {
             else -> Routes.ONBOARDING
         }
         setContent {
-            TindaTheme {
+            // Thème choisi dans les paramètres (F4) : aperçu instantané.
+            val themeId by prefs.appThemeId.collectAsState(initial = "lagoon")
+            val modeId by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM.id)
+            val dynamic by prefs.dynamicColor.collectAsState(initial = true)
+            val dark = when (ThemeMode.byId(modeId)) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            TindaTheme(
+                appTheme = themeById(themeId),
+                darkTheme = dark,
+                dynamicColor = dynamic,
+            ) {
                 TindaNavGraph(
                     startDestination = startDestination,
                     onRequestDefaultRole = ::requestDefaultSmsRole,

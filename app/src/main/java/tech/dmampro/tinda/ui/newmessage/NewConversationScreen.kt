@@ -46,6 +46,7 @@ import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
 
 /** État de l'écran de nouveau message. */
@@ -62,6 +63,7 @@ class NewConversationViewModel @Inject constructor(
     private val repository: SmsRepository,
     private val sender: SmsSender,
     private val simRepository: SimRepository,
+    private val soundPlayer: SendSoundPlayer,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NewMessageUiState())
@@ -102,6 +104,7 @@ class NewConversationViewModel @Inject constructor(
                     return@launch
                 }
                 sender.send(cleanAddress, body, _uiState.value.selectedSimId, threadId)
+                soundPlayer.playIfEnabled()
                 onThreadOpened(threadId)
             } catch (e: Exception) {
                 _uiState.update { it.copy(sendError = true) }

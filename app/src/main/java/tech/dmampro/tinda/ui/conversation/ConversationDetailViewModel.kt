@@ -21,6 +21,7 @@ import tech.dmampro.tinda.data.local.Draft
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.TindaDatabase
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
 
 /** État de l'écran de fil de discussion. */
@@ -43,6 +44,7 @@ class ConversationDetailViewModel @Inject constructor(
     private val simRepository: SimRepository,
     private val prefs: PrefsRepository,
     private val db: TindaDatabase,
+    private val soundPlayer: SendSoundPlayer,
 ) : ViewModel() {
 
     private val threadId: Long = savedStateHandle.get<Long>("threadId") ?: -1L
@@ -112,6 +114,7 @@ class ConversationDetailViewModel @Inject constructor(
                     return@launch
                 }
                 sender.send(address, text, simId, threadId, deliveryReport = true)
+                soundPlayer.playIfEnabled()
                 db.draftDao().delete(draftKey())
                 draftText.value = ""
             } catch (e: Exception) {

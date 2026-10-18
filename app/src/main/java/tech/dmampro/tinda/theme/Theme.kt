@@ -3,53 +3,18 @@ package tech.dmampro.tinda.theme
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val TindaLightColors = lightColorScheme(
-    primary = TindaGreen40,
-    onPrimary = TindaNeutral99,
-    primaryContainer = TindaGreen90,
-    onPrimaryContainer = TindaGreen10,
-    secondary = TindaAmber40,
-    onSecondary = TindaNeutral99,
-    secondaryContainer = TindaAmber90,
-    onSecondaryContainer = TindaGreen10,
-    background = TindaNeutral99,
-    onBackground = TindaNeutral10,
-    surface = TindaNeutral99,
-    onSurface = TindaNeutral10,
-    error = TindaError40,
-    onError = TindaNeutral99,
-)
-
-private val TindaDarkColors = darkColorScheme(
-    primary = TindaGreen80,
-    onPrimary = TindaGreen20,
-    primaryContainer = TindaGreen20,
-    onPrimaryContainer = TindaGreen90,
-    secondary = TindaAmber80,
-    onSecondary = TindaGreen20,
-    secondaryContainer = TindaAmber40,
-    onSecondaryContainer = TindaAmber90,
-    background = TindaNeutral10,
-    onBackground = TindaNeutral95,
-    surface = TindaNeutral10,
-    onSurface = TindaNeutral95,
-    error = TindaError80,
-    onError = TindaGreen20,
-)
-
 /**
- * Thème de l'application. Couleurs dynamiques (Material You) sur Android 12+,
- * palette « Tinda » originale sinon. Clair/sombre suivis du système.
+ * Thème de l'application (F4) : 6 thèmes originaux + couleurs dynamiques
+ * (Material You) sur Android 12+. Clair/sombre suivis du système ou forcés.
  */
 @Composable
 fun TindaTheme(
+    appTheme: AppThemeSpec = TINDA_THEMES.first(),
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
@@ -59,8 +24,8 @@ fun TindaTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        darkTheme -> TindaDarkColors
-        else -> TindaLightColors
+        darkTheme -> appTheme.dark
+        else -> appTheme.light
     }
     MaterialTheme(
         colorScheme = colorScheme,

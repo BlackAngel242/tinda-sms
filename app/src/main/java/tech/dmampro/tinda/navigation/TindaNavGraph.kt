@@ -10,6 +10,7 @@ import tech.dmampro.tinda.onboarding.OnboardingScreen
 import tech.dmampro.tinda.ui.conversation.ConversationDetailScreen
 import tech.dmampro.tinda.ui.conversations.ConversationListScreen
 import tech.dmampro.tinda.ui.newmessage.NewConversationScreen
+import tech.dmampro.tinda.ui.settings.BlocklistScreen
 import tech.dmampro.tinda.ui.settings.SettingsScreen
 
 /**
@@ -68,7 +69,13 @@ fun TindaNavGraph(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenBlocklist = { navController.navigate(Routes.BLOCKLIST) },
+            )
+        }
+        composable(Routes.BLOCKLIST) {
+            BlocklistScreen(onBack = { navController.popBackStack() })
         }
     }
 }

@@ -44,4 +44,59 @@
     <string name="role_blocked_message">Tinda was installed manually, so Android may block the automatic request. You can set it yourself: Settings → Apps → Default apps → SMS app → Tinda.</string>
     <string name="role_blocked_open_settings">Open settings</string>
     <string name="role_blocked_later">Later</string>
+    <!-- Lot 2: themes (F4) -->
+    <string name="theme_lagoon">Lagoon</string>
+    <string name="theme_sahel">Sahel</string>
+    <string name="theme_fleuve">River</string>
+    <string name="theme_baobab">Baobab</string>
+    <string name="theme_nuit">Night</string>
+    <string name="theme_orchidee">Orchid</string>
+    <!-- Lot 2: settings -->
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_display_mode">Display</string>
+    <string name="settings_mode_system">System</string>
+    <string name="settings_mode_light">Light</string>
+    <string name="settings_mode_dark">Dark</string>
+    <string name="settings_dynamic_color">Dynamic colors</string>
+    <string name="settings_sound">Send sound</string>
+    <string name="settings_sound_enabled">Play a sound on send</string>
+    <string name="settings_sound_volume">Volume</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_french">Français</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_system_note">On this Android version, the language follows the system.</string>
+    <string name="settings_blocklist">Blocklist</string>
+    <string name="settings_blocklist_desc">Blocked numbers and block journal</string>
+    <string name="settings_advanced">Advanced options</string>
+    <string name="settings_gestures">Swipe gestures</string>
+    <string name="settings_swipe_right">Swipe right</string>
+    <string name="settings_swipe_left">Swipe left</string>
+    <string name="settings_gesture_action">Gesture action</string>
+    <string name="settings_archived">Archived conversations (%d)</string>
+    <string name="settings_archived_empty">No archived conversation.</string>
+    <string name="settings_unarchive">Unarchive</string>
+    <!-- Lot 2: gesture actions (F5) -->
+    <string name="action_reply">Reply</string>
+    <string name="action_archive">Archive</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_call">Call</string>
+    <!-- Lot 2: search (F3) -->
+    <string name="search_hint">Search SMS</string>
+    <string name="search_no_results">No results for "%1$s".</string>
+    <!-- Lot 2: blocklist (F7) -->
+    <string name="blocklist_title">Blocklist</string>
+    <string name="blocklist_add_hint">Number to block</string>
+    <string name="blocklist_add">Block</string>
+    <string name="blocklist_numbers">Blocked numbers (%d)</string>
+    <string name="blocklist_empty">No blocked number.</string>
+    <string name="blocklist_unblock">Unblock</string>
+    <string name="blocklist_journal">Block journal</string>
+    <string name="blocklist_journal_desc">Events only: number and date, never the content.</string>
+    <string name="blocklist_journal_empty">No blocked SMS yet.</string>
+    <!-- Lot 2: thread deletion -->
+    <string name="delete_thread_title">Delete conversation?</string>
+    <string name="delete_thread_message">Permanently delete the conversation with %1$s? This cannot be undone.</string>
+    <string name="delete_confirm">Delete</string>
+    <string name="cancel">Cancel</string>
 </resources>
