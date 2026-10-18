@@ -18,6 +18,11 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // 4 ABI -> 2 : x86/x86_64 ne servent qu'aux émulateurs. -10 Mo d'APK,
+        // crucial pour les connexions lentes (testeur sous réseau faible).
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     // BuildConfig requis par TindaApp (StrictMode) et TindaLogger.
@@ -46,6 +51,15 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            // Minification aussi en debug : l'APK passe de ~32 Mo à ~15 Mo,
+            // téléchargeable sur connexion lente. R8 full mode : Hilt, Room
+            // et Compose fournissent leurs règles via leurs AAR.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
