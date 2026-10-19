@@ -342,6 +342,9 @@ interface DraftDao {
 
     @Query("DELETE FROM drafts WHERE `key` = :key")
     suspend fun delete(key: String)
+
+    @Query("SELECT * FROM drafts ORDER BY updatedAt DESC")
+    fun observeAll(): Flow<List<Draft>>
 }
 
 @Dao
