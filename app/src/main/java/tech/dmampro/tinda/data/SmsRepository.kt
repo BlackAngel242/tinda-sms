@@ -7,6 +7,9 @@ import android.provider.ContactsContract
 import android.provider.Telephony
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -295,6 +298,7 @@ class SmsRepository @Inject constructor(
         val snippet: String,
         val date: Long,
         val unread: Int,
+        val subscriptionId: Int?,
     )
 
     private suspend fun loadConversations(): List<ConversationItem> {
@@ -305,18 +309,25 @@ class SmsRepository @Inject constructor(
             return emptyList()
         }
         val archived = db.archiveDao().archivedIds().toSet()
-        return rows
-            .filter { it.threadId !in archived }
-            .map { row ->
-                ConversationItem(
-                    threadId = row.threadId,
-                    address = row.address,
-                    displayName = runCatching { lookupNameSync(row.address) }.getOrDefault(row.address),
-                    snippet = row.snippet,
-                    date = row.date,
-                    unread = row.unread > 0,
-                )
-            }
+        // Noms des contacts en parallèle : N requêtes séquentielles au
+        // provider Contacts coûtaient plusieurs secondes sur gros carnet.
+        return coroutineScope {
+            rows
+                .filter { it.threadId !in archived }
+                .map { row ->
+                    async {
+                        ConversationItem(
+                            threadId = row.threadId,
+                            address = row.address,
+                            displayName = runCatching { lookupNameSync(row.address) }.getOrDefault(row.address),
+                            snippet = row.snippet,
+                            date = row.date,
+                            unreadCount = row.unread,
+                            subscriptionId = row.subscriptionId,
+                        )
+                    }
+                }.awaitAll()
+        }
     }
 
     /**
@@ -334,6 +345,7 @@ class SmsRepository @Inject constructor(
             Telephony.Threads.DATE,
             "address",
             "body",
+            "sim_id",
         )
         try {
             context.contentResolver.query(
@@ -344,6 +356,7 @@ class SmsRepository @Inject constructor(
                 val iDate = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
                 val iAddress = c.getColumnIndex("address")
                 val iBody = c.getColumnIndex("body")
+                val iSim = c.getColumnIndex("sim_id")
                 while (c.moveToNext()) {
                     // thread_id peut manquer sur ROM non standard : repli sur _id.
                     val threadId = if (iThread >= 0) c.getLong(iThread) else c.getLong(
@@ -356,6 +369,11 @@ class SmsRepository @Inject constructor(
                             snippet = if (iBody >= 0) c.getString(iBody).orEmpty() else "",
                             date = c.getLong(iDate),
                             unread = 0,
+                            subscriptionId = if (iSim >= 0) {
+                                c.getInt(iSim).takeIf { it >= 0 }
+                            } else {
+                                null
+                            },
                         ),
                     )
                 }
@@ -387,6 +405,7 @@ class SmsRepository @Inject constructor(
             Telephony.Sms.BODY,
             Telephony.Sms.DATE,
             Telephony.Sms.READ,
+            Telephony.Sms.SUBSCRIPTION_ID,
         )
         context.contentResolver.query(
             Telephony.Sms.CONTENT_URI, projection, null, null,
@@ -397,6 +416,7 @@ class SmsRepository @Inject constructor(
             val iBody = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
             val iDate = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
             val iRead = c.getColumnIndexOrThrow(Telephony.Sms.READ)
+            val iSub = c.getColumnIndex(Telephony.Sms.SUBSCRIPTION_ID)
             while (c.moveToNext()) {
                 val threadId = c.getLong(iThread)
                 if (c.getInt(iRead) == 0) unread[threadId] = (unread[threadId] ?: 0) + 1
@@ -407,6 +427,11 @@ class SmsRepository @Inject constructor(
                         snippet = c.getString(iBody).orEmpty(),
                         date = c.getLong(iDate),
                         unread = 0,
+                        subscriptionId = if (iSub >= 0) {
+                            c.getInt(iSub).takeIf { it >= 0 }
+                        } else {
+                            null
+                        },
                     )
                 }
             }

@@ -83,3 +83,20 @@ val OrchiS90 = Color(0xFFFFE1A4)
 val OrchiS10 = Color(0xFF271800)
 val OrchiBgLight = Color(0xFFFFF8FA)
 val OrchiBgDark = Color(0xFF201A1E)
+
+// Radiant Slate : ardoise obsidienne profonde + teal radiant.
+// Système de design "Radiant Slate" (Stitch, 19 oct. 2026) : canvas
+// ultra-sombre, accents teal luminescents, hiérarchie par couches tonales.
+val RadiantBg = Color(0xFF0B0F14)
+val RadiantSurfaceLow = Color(0xFF121820)
+val RadiantSurface = Color(0xFF1A222D)
+val RadiantSurfaceHigh = Color(0xFF242E3D)
+val RadiantPrimary = Color(0xFF00D2B4)
+val RadiantPrimaryDeep = Color(0xFF00B89C)
+val RadiantOnPrimary = Color(0xFF00382E)
+val RadiantText = Color(0xFFF3F5F7)
+val RadiantTextSecondary = Color(0xFF94A3B8)
+val RadiantTextTertiary = Color(0xFF64748B)
+val RadiantSky = Color(0xFF38BDF8)
+val RadiantSim1 = Color(0xFFF44444)
+val RadiantSim2 = Color(0xFFF59E0B)

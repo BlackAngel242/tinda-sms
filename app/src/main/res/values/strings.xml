@@ -53,6 +53,7 @@
     <string name="role_blocked_open_settings">Open settings</string>
     <string name="role_blocked_later">Later</string>
     <!-- Lot 2: themes (F4) -->
+    <string name="theme_radiant">Radiant Slate</string>
     <string name="theme_lagoon">Lagoon</string>
     <string name="theme_sahel">Sahel</string>
     <string name="theme_fleuve">River</string>
@@ -220,4 +221,22 @@
     <string name="autoreply_scope_contacts">Contacts only</string>
     <string name="autoreply_scope_non_contacts">Non-contacts</string>
     <string name="autoreply_cooldown">Delay between two replies</string>
+    <string name="network_pill_dual">Cellular SMS network • SIM 1 (%1$s) &amp; SIM 2 (%2$s) active</string>
+    <string name="network_pill_single">Cellular SMS network • SIM 1 (%1$s) active</string>
+    <string name="otp_card_title">Security • Verification code</string>
+    <string name="otp_copy">Copy</string>
+    <string name="otp_copied">Code copied</string>
+    <string name="quick_template_1">In a meeting, I\'ll call you back</string>
+    <string name="quick_template_2">On my way, arriving in 10 min</string>
+    <string name="quick_template_3">OK, sounds good!</string>
+    <string name="quick_template_4">I\'ll check and get back to you</string>
+    <string name="encoding_indicator">%1$d/%2$d • %3$s (%4$d SMS)</string>
+    <string name="composer_hint_sim">Write an SMS (SIM %1$d)…</string>
+    <string name="day_today">Today</string>
+    <string name="filter_all">All</string>
+    <string name="sim_chip_label">SIM %1$d</string>
+    <string name="copy_code">Copy</string>
+    <string name="otp_badge">CODE 2FA</string>
+    <string name="recent_messages">RECENT MESSAGES</string>
+    <string name="sim_dot_description">SIM %1$d</string>
 </resources>

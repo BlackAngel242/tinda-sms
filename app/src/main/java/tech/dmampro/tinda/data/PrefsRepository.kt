@@ -48,9 +48,9 @@ class PrefsRepository @Inject constructor(
 
     // ---- Thème (F4) ----
 
-    /** Identifiant du thème choisi ("lagoon" par défaut). */
+    /** Identifiant du thème choisi ("radiant" par défaut). */
     val appThemeId: Flow<String> =
-        store.data.map { it[KEY_THEME_ID] ?: "lagoon" }
+        store.data.map { it[KEY_THEME_ID] ?: "radiant" }
 
     suspend fun setAppThemeId(id: String) {
         store.edit { it[KEY_THEME_ID] = id }

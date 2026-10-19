@@ -78,8 +78,50 @@ private fun tindaScheme(
     return AppThemeSpec(id, labelRes, light, dark)
 }
 
-/** Les 6 thèmes originaux de Tinda (F4). Aucun asset repris d'une autre app. */
+/** Les thèmes originaux de Tinda (F4). Aucun asset repris d'une autre app. */
 val TINDA_THEMES: List<AppThemeSpec> = listOf(
+    // Radiant Slate en premier : thème phare (design Stitch, 19 oct. 2026).
+    AppThemeSpec(
+        id = "radiant",
+        labelRes = R.string.theme_radiant,
+        light = lightColorScheme(
+            primary = RadiantPrimaryDeep,
+            onPrimary = RadiantText,
+            primaryContainer = RadiantPrimary,
+            onPrimaryContainer = RadiantOnPrimary,
+            secondary = RadiantSky,
+            background = RadiantText,
+            onBackground = RadiantBg,
+            surface = RadiantText,
+            onSurface = RadiantBg,
+            surfaceVariant = RadiantSurface,
+            onSurfaceVariant = RadiantTextSecondary,
+            error = TindaError40,
+        ),
+        dark = darkColorScheme(
+            primary = RadiantPrimary,
+            onPrimary = RadiantOnPrimary,
+            primaryContainer = RadiantPrimaryDeep,
+            onPrimaryContainer = RadiantText,
+            secondary = RadiantSky,
+            onSecondary = RadiantOnPrimary,
+            tertiary = RadiantSky,
+            background = RadiantBg,
+            onBackground = RadiantText,
+            surface = RadiantSurfaceLow,
+            onSurface = RadiantText,
+            surfaceVariant = RadiantSurface,
+            onSurfaceVariant = RadiantTextSecondary,
+            surfaceContainerLowest = RadiantBg,
+            surfaceContainerLow = RadiantSurfaceLow,
+            surfaceContainer = RadiantSurface,
+            surfaceContainerHigh = RadiantSurfaceHigh,
+            surfaceContainerHighest = RadiantSurfaceHigh,
+            outline = RadiantTextTertiary,
+            outlineVariant = RadiantSurfaceHigh,
+            error = TindaError80,
+        ),
+    ),
     tindaScheme(
         "lagoon", R.string.theme_lagoon,
         TindaGreen40, TindaGreen80, TindaGreen90, TindaGreen10,

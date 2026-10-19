@@ -17,6 +17,8 @@ import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.PrefsRepository
 import tech.dmampro.tinda.data.SearchRepository
 import tech.dmampro.tinda.data.SearchResultItem
+import tech.dmampro.tinda.data.SimInfo
+import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.SwipeAction
 import javax.inject.Inject
@@ -28,7 +30,8 @@ data class ConversationItem(
     val displayName: String,
     val snippet: String,
     val date: Long,
-    val unread: Boolean,
+    val unreadCount: Int,
+    val subscriptionId: Int?,
 )
 
 /** Liste des conversations (lot 1 : vraies données ; lot 2 : recherche, gestes). */
@@ -37,6 +40,7 @@ class ConversationListViewModel @Inject constructor(
     private val repository: SmsRepository,
     private val searchRepository: SearchRepository,
     private val prefs: PrefsRepository,
+    private val simRepository: SimRepository,
 ) : ViewModel() {
 
     val conversations: StateFlow<List<ConversationItem>> =
@@ -45,6 +49,24 @@ class ConversationListViewModel @Inject constructor(
 
     private val _isDefaultSmsApp = MutableStateFlow(true)
     val isDefaultSmsApp: StateFlow<Boolean> = _isDefaultSmsApp
+
+    // ---- Double SIM : infos et filtre (design Radiant Slate) ----
+
+    private val _sims = MutableStateFlow<List<SimInfo>>(emptyList())
+    val sims: StateFlow<List<SimInfo>> = _sims.asStateFlow()
+
+    /** Filtre SIM actif : subscriptionId, ou null pour "Toutes". */
+    private val _simFilter = MutableStateFlow<Int?>(null)
+    val simFilter: StateFlow<Int?> = _simFilter.asStateFlow()
+
+    val filteredConversations: StateFlow<List<ConversationItem>> =
+        kotlinx.coroutines.flow.combine(conversations, _simFilter) { list, filter ->
+            if (filter == null) list else list.filter { it.subscriptionId == filter }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setSimFilter(subscriptionId: Int?) {
+        _simFilter.value = subscriptionId
+    }
 
     // ---- Recherche plein texte (F3) ----
 
@@ -90,6 +112,7 @@ class ConversationListViewModel @Inject constructor(
         viewModelScope.launch {
             repository.syncConversations()
             _isDefaultSmsApp.update { repository.isDefaultSmsApp() }
+            _sims.update { simRepository.getActiveSims() }
         }
     }
 }

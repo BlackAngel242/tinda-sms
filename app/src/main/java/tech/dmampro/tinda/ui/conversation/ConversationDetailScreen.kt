@@ -1,40 +1,55 @@
 package tech.dmampro.tinda.ui.conversation
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -44,20 +59,47 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 import tech.dmampro.tinda.R
+import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.theme.RadiantBg
+import tech.dmampro.tinda.theme.RadiantPrimary
+import tech.dmampro.tinda.theme.RadiantPrimaryDeep
+import tech.dmampro.tinda.theme.RadiantSim1
+import tech.dmampro.tinda.theme.RadiantSim2
+import tech.dmampro.tinda.theme.RadiantSurface
+import tech.dmampro.tinda.theme.RadiantSurfaceHigh
+import tech.dmampro.tinda.theme.RadiantText
+import tech.dmampro.tinda.theme.RadiantTextSecondary
+import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.ui.schedule.ScheduleDialog
+import tech.dmampro.tinda.util.OtpDetection
 import tech.dmampro.tinda.util.SmsEncoding
 import tech.dmampro.tinda.util.TimeFormat
 
 /**
- * Fil de discussion (lot 1) : bulles, zone d'envoi, compteur de segments,
- * statut de livraison (DEC-008, RB-05 : "livré", jamais "lu" en SMS pur),
- * badge SIM visible et choix de la SIM par conversation (US-002).
+ * Fil de discussion, style "Radiant Slate" (design Stitch, oct. 2026) :
+ * canvas ardoise profonde, bulles sortantes en dégradé teal, bordure
+ * colorée selon la SIM d'envoi, carte OTP dédiée, modèles rapides,
+ * sélecteur SIM et indicateur d'encodage dans le compositeur.
+ * La logique d'envoi (SmsSender) et les ViewModels sont inchangés.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,21 +111,33 @@ fun ConversationDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val draft by viewModel.draftText.collectAsState()
-    var simMenuOpen by remember { mutableStateOf(false) }
     var failedMessage by remember { mutableStateOf<Message?>(null) }
     var showSchedule by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val locale = Locale.getDefault()
+    val todayLabel = stringResource(R.string.day_today)
+
+    // Messages groupés par jour pour les pilules de date.
+    val dayGroups = remember(messages, locale, todayLabel) {
+        groupByDay(messages, locale, todayLabel)
+    }
+    // Pilule réseau + (pilule date + messages) par jour : index du dernier.
+    val totalItems = remember(dayGroups) { 1 + dayGroups.sumOf { 1 + it.messages.size } }
 
     // Toujours scroller vers le dernier message.
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    LaunchedEffect(totalItems) {
+        if (totalItems > 0) listState.animateScrollToItem(totalItems - 1)
     }
 
     val segmentInfo = remember(draft) { SmsEncoding.segmentInfo(draft) }
-    val selectedSimName = uiState.sims.firstOrNull { it.subscriptionId == uiState.selectedSimId }
-        ?.displayName
+    val slotBySubId = remember(uiState.sims) {
+        uiState.sims.associate { it.subscriptionId to it.slotIndex }
+    }
+    val selectedSim = uiState.sims.firstOrNull { it.subscriptionId == uiState.selectedSimId }
+    val selectedSlot = (slotBySubId[uiState.selectedSimId] ?: 0) + 1
 
     Scaffold(
+        containerColor = RadiantBg,
         topBar = {
             TopAppBar(
                 title = {
@@ -91,20 +145,25 @@ fun ConversationDetailScreen(
                         Text(
                             uiState.displayName,
                             style = MaterialTheme.typography.titleMedium,
+                            color = RadiantText,
                             maxLines = 1,
                         )
-                        if (selectedSimName != null) {
+                        if (selectedSim != null) {
                             Text(
-                                selectedSimName,
+                                selectedSim.displayName,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = RadiantTextSecondary,
                             )
                         }
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = RadiantText,
+                        )
                     }
                 },
                 actions = {
@@ -115,93 +174,28 @@ fun ConversationDetailScreen(
                         Icon(
                             Icons.Filled.Schedule,
                             contentDescription = stringResource(R.string.schedule_title),
+                            tint = RadiantPrimary,
                         )
                     }
-                    if (uiState.sims.size > 1) {
-                        Box {
-                            AssistChip(
-                                onClick = { simMenuOpen = true },
-                                label = { Text(selectedSimName ?: "") },
-                            )
-                            DropdownMenu(
-                                expanded = simMenuOpen,
-                                onDismissRequest = { simMenuOpen = false },
-                            ) {
-                                Text(
-                                    stringResource(R.string.sim_choose),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                )
-                                uiState.sims.forEach { sim ->
-                                    DropdownMenuItem(
-                                        text = { Text(sim.displayName) },
-                                        onClick = {
-                                            viewModel.onSimSelected(sim.subscriptionId)
-                                            simMenuOpen = false
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = RadiantBg),
             )
         },
         bottomBar = {
             // Le champ de saisie doit rester au-dessus de la barre de
-            // navigation système (gestes ou boutons) et remonter
-            // au-dessus du clavier quand il s'ouvre.
-            Column(
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(8.dp)
-            ) {
-                if (uiState.sendError) {
-                    Text(
-                        stringResource(R.string.status_failed),
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedTextField(
-                        value = draft,
-                        onValueChange = viewModel::onDraftChange,
-                        modifier = Modifier.weight(1f),
-                        placeholder = { Text(stringResource(R.string.message_hint)) },
-                        shape = RoundedCornerShape(24.dp),
-                        maxLines = 4,
-                    )
-                    IconButton(
-                        onClick = viewModel::send,
-                        enabled = draft.isNotBlank() && !uiState.sending,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource(R.string.send),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-                if (segmentInfo.parts > 1 || draft.isNotEmpty()) {
-                    Text(
-                        stringResource(
-                            R.string.segments,
-                            segmentInfo.remaining,
-                            if (segmentInfo.encoding == SmsEncoding.Encoding.GSM_7) 160 else 70,
-                            segmentInfo.parts,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                    )
-                }
-            }
+            // navigation système et remonter au-dessus du clavier.
+            Composer(
+                draft = draft,
+                onDraftChange = viewModel::onDraftChange,
+                onSend = viewModel::send,
+                sending = uiState.sending,
+                sendError = uiState.sendError,
+                sims = uiState.sims,
+                selectedSimId = uiState.selectedSimId,
+                selectedSlot = selectedSlot,
+                onSimSelected = viewModel::onSimSelected,
+                segmentInfo = segmentInfo,
+            )
         },
     ) { innerPadding ->
         if (!uiState.ready) {
@@ -211,15 +205,33 @@ fun ConversationDetailScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 12.dp),
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(
-                        message = message,
-                        onFailedClick = { failedMessage = it },
-                    )
+                item(key = "network") { NetworkPill(uiState.sims) }
+                dayGroups.forEach { group ->
+                    item(key = "day-${group.startOfDay}") { DatePill(group.label) }
+                    items(group.messages, key = { it.id }) { message ->
+                        val otpCode = if (message.incoming) {
+                            OtpDetection.detectCode(message.body)
+                        } else {
+                            null
+                        }
+                        if (otpCode != null) {
+                            OtpCard(message = message, code = otpCode)
+                        } else {
+                            MessageBubble(
+                                message = message,
+                                simColor = if (!message.incoming) {
+                                    simColorFor(slotBySubId[message.subscriptionId])
+                                } else {
+                                    null
+                                },
+                                onFailedClick = { failedMessage = it },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -241,66 +253,570 @@ fun ConversationDetailScreen(
     }
 }
 
+/** Pilule d'info réseau : noms d'opérateurs réels via SubscriptionManager. */
+@Composable
+private fun NetworkPill(sims: List<SimInfo>) {
+    if (sims.isEmpty()) return
+    val text = if (sims.size >= 2) {
+        stringResource(R.string.network_pill_dual, sims[0].displayName, sims[1].displayName)
+    } else {
+        stringResource(R.string.network_pill_single, sims[0].displayName)
+    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            modifier = Modifier
+                .background(RadiantSurface, RoundedCornerShape(50))
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(
+                Icons.Filled.Smartphone,
+                contentDescription = null,
+                tint = RadiantPrimary,
+                modifier = Modifier.size(14.dp),
+            )
+            Text(
+                text,
+                style = MaterialTheme.typography.labelSmall,
+                color = RadiantTextSecondary,
+            )
+        }
+    }
+}
+
+/** Pilule de date centrée ("AUJOURD'HUI, 19 OCTOBRE"). */
+@Composable
+private fun DatePill(label: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = RadiantTextSecondary,
+            modifier = Modifier
+                .background(RadiantSurface, RoundedCornerShape(50))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        )
+    }
+}
+
+/** Couleur de bordure selon la SIM d'envoi (rouge SIM 1, ambre SIM 2). */
+private fun simColorFor(slotIndex: Int?): Color? = when (slotIndex) {
+    0 -> RadiantSim1
+    1 -> RadiantSim2
+    else -> null
+}
+
 @Composable
 private fun MessageBubble(
     message: Message,
+    simColor: Color?,
     onFailedClick: (Message) -> Unit,
 ) {
     val isIncoming = message.incoming
-    Row(
+    val bubbleShape = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomStart = if (isIncoming) 4.dp else 20.dp,
+        bottomEnd = if (isIncoming) 20.dp else 4.dp,
+    )
+    // Dégradé 135 degrés (haut-gauche vers bas-droite) pour les sortants.
+    val outgoingBrush = Brush.linearGradient(
+        colors = listOf(RadiantPrimary, RadiantPrimaryDeep),
+        start = Offset.Zero,
+        end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
+    )
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isIncoming) Arrangement.Start else Arrangement.End,
+        horizontalAlignment = if (isIncoming) Alignment.Start else Alignment.End,
     ) {
-        Surface(
-            // Bulles directionnelles façon messagerie classique : le coin
-            // côté expéditeur est coupé (4.dp), les autres arrondis (18.dp).
-            // Style original recréé de zéro, aucun asset repris.
-            shape = RoundedCornerShape(
-                topStart = 18.dp,
-                topEnd = 18.dp,
-                bottomStart = if (isIncoming) 4.dp else 18.dp,
-                bottomEnd = if (isIncoming) 18.dp else 4.dp,
-            ),
-            color = if (isIncoming) {
-                MaterialTheme.colorScheme.surfaceVariant
-            } else {
-                MaterialTheme.colorScheme.primaryContainer
-            },
-            modifier = Modifier.fillMaxWidth(0.8f),
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .let {
-                        if (!isIncoming && message.status == MessageStatus.FAILED) {
-                            it.clickable { onFailedClick(message) }
-                        } else {
-                            it
-                        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .then(
+                    if (isIncoming) {
+                        Modifier
+                    } else {
+                        // Halo teal subtil autour des bulles sortantes.
+                        Modifier.shadow(
+                            elevation = 6.dp,
+                            shape = bubbleShape,
+                            ambientColor = RadiantPrimary.copy(alpha = 0.22f),
+                            spotColor = RadiantPrimary.copy(alpha = 0.22f),
+                        )
                     },
-            ) {
-                Text(
-                    message.body,
-                    style = MaterialTheme.typography.bodyMedium,
                 )
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    if (!isIncoming) {
-                        StatusIcon(status = message.status)
+                .then(
+                    if (isIncoming) {
+                        Modifier.background(RadiantSurface, bubbleShape)
+                    } else {
+                        Modifier.background(outgoingBrush, bubbleShape)
+                    },
+                )
+                .let {
+                    if (!isIncoming && message.status == MessageStatus.FAILED) {
+                        it.clickable { onFailedClick(message) }
+                    } else {
+                        it
                     }
-                }
+                },
+        ) {
+            Text(
+                message.body,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isIncoming) RadiantText else RadiantBg,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+            // Fine bordure colorée selon la SIM d'envoi (côté droit).
+            if (simColor != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 1.dp)
+                        .width(3.dp)
+                        .fillMaxHeight(0.65f)
+                        .background(simColor, RoundedCornerShape(50)),
+                )
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
+        ) {
+            Text(
+                TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
+                style = MaterialTheme.typography.labelSmall,
+                color = RadiantTextTertiary,
+            )
+            if (!isIncoming) {
+                StatusIcon(status = message.status)
             }
         }
     }
 }
+
+/** Carte OTP dédiée : code isolé en grand, bouton copier, texte original en petit. */
+@Composable
+private fun OtpCard(
+    message: Message,
+    code: String,
+) {
+    val context = LocalContext.current
+    val cardShape = RoundedCornerShape(20.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.88f)
+                .background(RadiantSurface, cardShape),
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Filled.Shield,
+                        contentDescription = null,
+                        tint = RadiantPrimary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Text(
+                        stringResource(R.string.otp_card_title),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = RadiantPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "2FA",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = RadiantTextTertiary,
+                        modifier = Modifier
+                            .background(RadiantBg, RoundedCornerShape(50))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(RadiantBg, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Text(
+                        OtpDetection.formatCode(code),
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp,
+                        letterSpacing = 2.sp,
+                        color = RadiantPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .background(RadiantPrimary, RoundedCornerShape(50))
+                            .clickable {
+                                copyToClipboard(context, code)
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.otp_copied),
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.ContentCopy,
+                            contentDescription = null,
+                            tint = RadiantBg,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            stringResource(R.string.otp_copy),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = RadiantBg,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    message.body,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = RadiantTextSecondary,
+                )
+            }
+            // Accent rouge sur le bord droit, comme la maquette.
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(x = 1.dp)
+                    .width(3.dp)
+                    .fillMaxHeight(0.8f)
+                    .background(RadiantSim1, RoundedCornerShape(50)),
+            )
+        }
+        Text(
+            TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
+            style = MaterialTheme.typography.labelSmall,
+            color = RadiantTextTertiary,
+            modifier = Modifier.padding(top = 2.dp, start = 4.dp),
+        )
+    }
+}
+
+/** Copie via le presse-papiers système (API stable, pas de dépréciation Compose). */
+private fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("otp", text))
+}
+
+/**
+ * Compositeur : modèles rapides, pastilles SIM, indicateur d'encodage,
+ * champ pilule et bouton d'envoi circulaire. La logique d'envoi reste
+ * celle du ViewModel (SmsSender).
+ */
+@Composable
+private fun Composer(
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onSend: () -> Unit,
+    sending: Boolean,
+    sendError: Boolean,
+    sims: List<SimInfo>,
+    selectedSimId: Int,
+    selectedSlot: Int,
+    onSimSelected: (Int) -> Unit,
+    segmentInfo: SmsEncoding.SegmentInfo,
+) {
+    Column(
+        modifier = Modifier
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (sendError) {
+            Text(
+                stringResource(R.string.status_failed),
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 8.dp),
+            )
+        }
+        QuickTemplatesRow(
+            onInsert = { template ->
+                onDraftChange(if (draft.isBlank()) template else "$draft $template")
+            },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (sims.size > 1) {
+                SimPills(
+                    sims = sims,
+                    selectedSimId = selectedSimId,
+                    onSelect = onSimSelected,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            if (draft.isNotEmpty()) {
+                EncodingIndicator(segmentInfo = segmentInfo, draft = draft)
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            val canSend = draft.isNotBlank() && !sending
+            BasicTextField(
+                value = draft,
+                onValueChange = onDraftChange,
+                modifier = Modifier.weight(1f),
+                maxLines = 4,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = RadiantText),
+                cursorBrush = SolidColor(RadiantPrimary),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .background(RadiantSurface, RoundedCornerShape(28.dp))
+                            .border(
+                                1.dp,
+                                Color.White.copy(alpha = 0.08f),
+                                RoundedCornerShape(28.dp),
+                            )
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    ) {
+                        if (draft.isEmpty()) {
+                            Text(
+                                stringResource(R.string.composer_hint_sim, selectedSlot),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = RadiantTextTertiary,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        if (canSend) RadiantPrimary else RadiantSurfaceHigh,
+                        CircleShape,
+                    )
+                    .clickable(enabled = canSend, onClick = onSend),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = stringResource(R.string.send),
+                    tint = RadiantBg,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Tiroir de modèles rapides : un tap insère le texte, sans envoyer. */
+@Composable
+private fun QuickTemplatesRow(onInsert: (String) -> Unit) {
+    val templates = listOf(
+        stringResource(R.string.quick_template_1),
+        stringResource(R.string.quick_template_2),
+        stringResource(R.string.quick_template_3),
+        stringResource(R.string.quick_template_4),
+    )
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(vertical = 2.dp),
+    ) {
+        items(templates) { template ->
+            Box(
+                modifier = Modifier
+                    .background(RadiantSurfaceHigh, RoundedCornerShape(50))
+                    .clickable { onInsert(template) }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    template,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = RadiantText,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** Pastilles SIM du compositeur : la sélectionnée est mise en avant. */
+@Composable
+private fun SimPills(
+    sims: List<SimInfo>,
+    selectedSimId: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        sims.forEach { sim ->
+            val selected = sim.subscriptionId == selectedSimId
+            val dotColor = when (sim.slotIndex) {
+                0 -> RadiantSim1
+                1 -> RadiantSim2
+                else -> RadiantPrimary
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .background(
+                        if (selected) RadiantSurfaceHigh else Color.Transparent,
+                        RoundedCornerShape(50),
+                    )
+                    .border(
+                        1.dp,
+                        if (selected) dotColor else Color.White.copy(alpha = 0.12f),
+                        RoundedCornerShape(50),
+                    )
+                    .clickable { onSelect(sim.subscriptionId) }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Box(
+                    Modifier
+                        .size(8.dp)
+                        .background(dotColor, CircleShape),
+                )
+                Text(
+                    "${sim.slotIndex + 1} ${sim.displayName}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) RadiantText else RadiantTextSecondary,
+                )
+            }
+        }
+    }
+}
+
+/** Micro-indicateur d'encodage : "74/160 • GSM-7 (1 SMS)", bascule en UCS-2 si besoin. */
+@Composable
+private fun EncodingIndicator(
+    segmentInfo: SmsEncoding.SegmentInfo,
+    draft: String,
+) {
+    val isGsm7 = segmentInfo.encoding == SmsEncoding.Encoding.GSM_7
+    val used = remember(draft, isGsm7) {
+        if (isGsm7) SmsEncoding.septetCount(draft) ?: 0 else draft.length
+    }
+    val limit = if (isGsm7) 160 else 70
+    Text(
+        stringResource(
+            R.string.encoding_indicator,
+            used,
+            limit,
+            if (isGsm7) "GSM-7" else "UCS-2",
+            segmentInfo.parts,
+        ),
+        style = MaterialTheme.typography.labelSmall,
+        color = RadiantTextTertiary,
+        modifier = Modifier
+            .background(RadiantSurface, RoundedCornerShape(50))
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    )
+}
+
+/** Regroupement des messages par jour calendaire, ordre conservé. */
+private data class DayGroup(
+    val startOfDay: Long,
+    val label: String,
+    val messages: List<Message>,
+)
+
+private fun groupByDay(
+    messages: List<Message>,
+    locale: Locale,
+    todayLabel: String,
+): List<DayGroup> {
+    if (messages.isEmpty()) return emptyList()
+    val dateFormat = SimpleDateFormat(
+        if (locale.language == "fr") "d MMMM" else "MMMM d",
+        locale,
+    )
+    val groups = mutableListOf<DayGroup>()
+    var currentDayStart = -1L
+    var currentMessages = mutableListOf<Message>()
+    for (message in messages) {
+        val dayStart = startOfDay(message.date)
+        if (dayStart != currentDayStart) {
+            if (currentMessages.isNotEmpty()) {
+                groups.add(
+                    DayGroup(
+                        currentDayStart,
+                        dayLabel(currentDayStart, dateFormat, todayLabel, locale),
+                        currentMessages,
+                    ),
+                )
+            }
+            currentDayStart = dayStart
+            currentMessages = mutableListOf()
+        }
+        currentMessages.add(message)
+    }
+    if (currentMessages.isNotEmpty()) {
+        groups.add(
+            DayGroup(
+                currentDayStart,
+                dayLabel(currentDayStart, dateFormat, todayLabel, locale),
+                currentMessages,
+            ),
+        )
+    }
+    return groups
+}
+
+private fun startOfDay(epochMillis: Long): Long {
+    val cal = Calendar.getInstance()
+    cal.timeInMillis = epochMillis
+    cal.set(Calendar.HOUR_OF_DAY, 0)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return cal.timeInMillis
+}
+
+private fun dayLabel(
+    dayStart: Long,
+    dateFormat: SimpleDateFormat,
+    todayLabel: String,
+    locale: Locale,
+): String {
+    val datePart = dateFormat.format(Date(dayStart))
+    return if (isToday(dayStart)) {
+        "$todayLabel, $datePart".uppercase(locale)
+    } else {
+        datePart.uppercase(locale)
+    }
+}
+
+private fun isToday(dayStart: Long): Boolean = startOfDay(System.currentTimeMillis()) == dayStart
 
 /** Dialogue de diagnostic : pourquoi ce message est en échec (toucher le ⚠️). */
 @Composable
@@ -334,17 +850,17 @@ private fun StatusIcon(status: MessageStatus) {
     val (icon, tint, description) = when (status) {
         MessageStatus.SENDING -> Triple(
             Icons.Filled.Schedule,
-            MaterialTheme.colorScheme.onSurfaceVariant,
+            RadiantTextTertiary,
             R.string.status_sending,
         )
         MessageStatus.SENT -> Triple(
             Icons.Filled.Check,
-            MaterialTheme.colorScheme.onSurfaceVariant,
+            RadiantTextTertiary,
             R.string.status_sent,
         )
         MessageStatus.DELIVERED -> Triple(
             Icons.Filled.DoneAll,
-            MaterialTheme.colorScheme.primary,
+            RadiantPrimary,
             R.string.status_delivered,
         )
         MessageStatus.FAILED -> Triple(
@@ -358,6 +874,8 @@ private fun StatusIcon(status: MessageStatus) {
         icon,
         contentDescription = stringResource(description),
         tint = tint,
-        modifier = Modifier.padding(start = 4.dp),
+        modifier = Modifier
+            .padding(start = 4.dp)
+            .size(14.dp),
     )
 }

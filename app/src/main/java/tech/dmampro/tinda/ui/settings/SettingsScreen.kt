@@ -68,7 +68,7 @@ fun SettingsScreen(
     onOpenAutodelete: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
-    val themeId by viewModel.themeId.collectAsState(initial = "lagoon")
+    val themeId by viewModel.themeId.collectAsState(initial = "radiant")
     val themeMode by viewModel.themeMode.collectAsState(initial = ThemeMode.SYSTEM.id)
     val dynamicColor by viewModel.dynamicColor.collectAsState(initial = true)
     val swipeLeft by viewModel.swipeLeft.collectAsState(initial = SwipeAction.ARCHIVE.name)

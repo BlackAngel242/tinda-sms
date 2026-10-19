@@ -5,15 +5,16 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
- * Moteur de thèmes V1 : 6 thèmes originaux, identifiants uniques,
+ * Moteur de thèmes : thèmes originaux, identifiants uniques,
  * jeux clair/sombre distincts. Aucune dépendance Android (Color est
  * une simple valeur).
  */
 class TindaThemesTest {
 
     @Test
-    fun sixThemes() {
-        assertEquals(6, TINDA_THEMES.size)
+    fun sevenThemes() {
+        // 6 thèmes V1 + Radiant Slate (design Stitch, oct. 2026).
+        assertEquals(7, TINDA_THEMES.size)
     }
 
     @Test

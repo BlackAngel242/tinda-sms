@@ -1,7 +1,9 @@
 package tech.dmampro.tinda.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import tech.dmampro.tinda.util.SmsEncoding.Encoding
 
@@ -83,5 +85,27 @@ class SmsEncodingTest {
         val info = SmsEncoding.segmentInfo("Noël : ça coûte cher.")
         assertEquals(Encoding.UCS_2, info.encoding)
         assertEquals(1, info.parts)
+    }
+
+    @Test
+    fun isGsm7Char_basicTableTrue() {
+        assertTrue(SmsEncoding.isGsm7Char('A'))
+        assertTrue(SmsEncoding.isGsm7Char(' '))
+        assertTrue(SmsEncoding.isGsm7Char('é'))
+        assertTrue(SmsEncoding.isGsm7Char('0'))
+    }
+
+    @Test
+    fun isGsm7Char_extensionTableTrue() {
+        assertTrue(SmsEncoding.isGsm7Char('€'))
+        assertTrue(SmsEncoding.isGsm7Char('{'))
+        assertTrue(SmsEncoding.isGsm7Char('}'))
+    }
+
+    @Test
+    fun isGsm7Char_unsupportedFalse() {
+        assertFalse(SmsEncoding.isGsm7Char('ç'))
+        assertFalse(SmsEncoding.isGsm7Char('û'))
+        assertFalse(SmsEncoding.isGsm7Char('中'))
     }
 }
