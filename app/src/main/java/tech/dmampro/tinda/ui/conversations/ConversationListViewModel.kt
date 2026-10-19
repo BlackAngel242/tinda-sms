@@ -61,14 +61,36 @@ class ConversationListViewModel @Inject constructor(
     private val _simFilter = MutableStateFlow<Int?>(null)
     val simFilter: StateFlow<Int?> = _simFilter.asStateFlow()
 
+    /** Filtre "Codes 2FA" : n'affiche que les conversations avec un code OTP. */
+    private val _otpFilter = MutableStateFlow(false)
+    val otpFilter: StateFlow<Boolean> = _otpFilter.asStateFlow()
+
     val filteredConversations: StateFlow<List<ConversationItem>> =
-        kotlinx.coroutines.flow.combine(conversations, _simFilter) { list, filter ->
-            if (filter == null) list else list.filter { it.subscriptionId == filter }
+        kotlinx.coroutines.flow.combine(conversations, _simFilter, _otpFilter) { list, filter, otpOnly ->
+            var result = if (filter == null) list else list.filter { it.subscriptionId == filter }
+            if (otpOnly) {
+                result = result.filter {
+                    tech.dmampro.tinda.util.OtpDetection.detectCode(it.snippet) != null
+                }
+            }
+            result
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun setSimFilter(subscriptionId: Int?) {
         _simFilter.value = subscriptionId
     }
+
+    fun setOtpFilter(enabled: Boolean) {
+        _otpFilter.value = enabled
+    }
+
+    /** Nombre de conversations contenant un code 2FA (badge). */
+    val otpCount: StateFlow<Int> =
+        conversations.map { list ->
+            list.count {
+                tech.dmampro.tinda.util.OtpDetection.detectCode(it.snippet) != null
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
     // ---- Recherche plein texte (F3) ----
 

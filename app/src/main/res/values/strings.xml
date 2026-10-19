@@ -254,4 +254,5 @@
     <string name="stats_blocked">Blocked</string>
     <string name="stats_delivery">GSM delivery</string>
     <string name="stats_sim_sent">%1$d SMS sent</string>
+    <string name="filter_otp">2FA Codes</string>
 </resources>

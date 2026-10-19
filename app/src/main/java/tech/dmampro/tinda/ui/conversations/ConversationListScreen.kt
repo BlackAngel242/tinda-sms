@@ -119,6 +119,8 @@ fun ConversationListScreen(
     val swipeRightAction by viewModel.swipeRightAction.collectAsState()
     val sims by viewModel.sims.collectAsState()
     val simFilter by viewModel.simFilter.collectAsState()
+    val otpFilter by viewModel.otpFilter.collectAsState()
+    val otpCount by viewModel.otpCount.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pendingDelete by remember { mutableStateOf<ConversationItem?>(null) }
@@ -262,12 +264,15 @@ fun ConversationListScreen(
                     }
                 }
                 // Chips de filtre SIM (style Stitch).
-                if (sims.size > 1) {
+                if (sims.size > 1 || otpCount > 0) {
                     SimFilterChips(
                         sims = sims,
                         activeFilter = simFilter,
                         totalCount = allConversations.size,
                         onSelect = viewModel::setSimFilter,
+                        otpCount = otpCount,
+                        otpActive = otpFilter,
+                        onOtpToggle = viewModel::setOtpFilter,
                     )
                 }
                 if (conversations.isEmpty()) {
@@ -391,13 +396,16 @@ private fun simLabelFor(subscriptionId: Int?, sims: List<SimInfo>): String? {
     return "SIM ${sim.slotIndex + 1} ${sim.displayName}"
 }
 
-/** Chips de filtre par SIM : "Toutes (N)" + une chip par SIM. */
+/** Chips de filtre par SIM : "Toutes (N)" + une chip par SIM + "Codes 2FA". */
 @Composable
 private fun SimFilterChips(
     sims: List<SimInfo>,
     activeFilter: Int?,
     totalCount: Int,
     onSelect: (Int?) -> Unit,
+    otpCount: Int,
+    otpActive: Boolean,
+    onOtpToggle: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -406,8 +414,11 @@ private fun SimFilterChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SimChip(
-            active = activeFilter == null,
-            onClick = { onSelect(null) },
+            active = activeFilter == null && !otpActive,
+            onClick = {
+                onSelect(null)
+                onOtpToggle(false)
+            },
             dotColor = null,
             topText = "${stringResource(R.string.filter_all)} $totalCount",
             bottomText = null,
@@ -419,11 +430,23 @@ private fun SimFilterChips(
                 else -> RadiantTextTertiary
             }
             SimChip(
-                active = activeFilter == sim.subscriptionId,
-                onClick = { onSelect(sim.subscriptionId) },
+                active = activeFilter == sim.subscriptionId && !otpActive,
+                onClick = {
+                    onSelect(sim.subscriptionId)
+                    onOtpToggle(false)
+                },
                 dotColor = dot,
                 topText = stringResource(R.string.sim_chip_label, sim.slotIndex + 1),
                 bottomText = sim.displayName,
+            )
+        }
+        if (otpCount > 0) {
+            SimChip(
+                active = otpActive,
+                onClick = { onOtpToggle(!otpActive) },
+                dotColor = RadiantPrimary,
+                topText = "${stringResource(R.string.filter_otp)} $otpCount",
+                bottomText = null,
             )
         }
     }
