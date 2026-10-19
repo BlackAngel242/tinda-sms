@@ -40,7 +40,6 @@ class SmsRepository @Inject constructor(
 ) {
     private val refreshSignal = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
     private val nameCache = mutableMapOf<String, String>()
-    private val canonicalCache = mutableMapOf<String, String>()
 
     /** Vrai si Tinda est l'application SMS par défaut du système. */
     fun isDefaultSmsApp(): Boolean =
@@ -322,34 +321,39 @@ class SmsRepository @Inject constructor(
 
     /**
      * Liste des fils via le provider Threads (une ligne par fil) : rapide
-     * même avec des milliers de SMS, contrairement au balayage complet de
-     * la table des SMS. L'adresse vient de canonical_addresses via
-     * recipient_ids ; les non-lus d'une seule requête groupée.
+     * même avec des milliers de SMS. La ROM expose directement address et
+     * body dans son provider (pas de recipient_ids, pas de snippet) : on
+     * les lit en une seule requête. Les non-lus viennent d'une requête
+     * groupée séparée.
      */
     private fun queryThreads(): List<ThreadRow> {
         val rows = mutableListOf<ThreadRow>()
         val projection = arrayOf(
             Telephony.Threads._ID,
+            "thread_id",
             Telephony.Threads.DATE,
-            Telephony.Threads.SNIPPET,
-            Telephony.Threads.RECIPIENT_IDS,
+            "address",
+            "body",
         )
         try {
             context.contentResolver.query(
                 Telephony.Threads.CONTENT_URI, projection, null, null,
                 "${Telephony.Threads.DATE} DESC",
             )?.use { c ->
-                val iId = c.getColumnIndexOrThrow(Telephony.Threads._ID)
+                val iThread = c.getColumnIndex("thread_id")
                 val iDate = c.getColumnIndexOrThrow(Telephony.Threads.DATE)
-                val iSnippet = c.getColumnIndexOrThrow(Telephony.Threads.SNIPPET)
-                val iRecipients =
-                    c.getColumnIndexOrThrow(Telephony.Threads.RECIPIENT_IDS)
+                val iAddress = c.getColumnIndex("address")
+                val iBody = c.getColumnIndex("body")
                 while (c.moveToNext()) {
+                    // thread_id peut manquer sur ROM non standard : repli sur _id.
+                    val threadId = if (iThread >= 0) c.getLong(iThread) else c.getLong(
+                        c.getColumnIndexOrThrow(Telephony.Threads._ID),
+                    )
                     rows.add(
                         ThreadRow(
-                            threadId = c.getLong(iId),
-                            address = canonicalAddress(c.getString(iRecipients).orEmpty()),
-                            snippet = c.getString(iSnippet).orEmpty(),
+                            threadId = threadId,
+                            address = if (iAddress >= 0) c.getString(iAddress).orEmpty() else "",
+                            snippet = if (iBody >= 0) c.getString(iBody).orEmpty() else "",
                             date = c.getLong(iDate),
                             unread = 0,
                         ),
@@ -358,10 +362,56 @@ class SmsRepository @Inject constructor(
             }
         } catch (e: SecurityException) {
             throw e
+        } catch (e: IllegalArgumentException) {
+            // Provider Threads incompatible : repli sur le balayage direct.
+            return legacyScanThreads()
+        } catch (e: android.database.sqlite.SQLiteException) {
+            return legacyScanThreads()
         }
         if (rows.isEmpty()) return emptyList()
         val unread = queryUnreadCounts()
         return rows.map { it.copy(unread = unread[it.threadId] ?: 0) }
+    }
+
+    /**
+     * Repli historique : balaye la table des SMS (lent sur gros volumes
+     * mais universel). Utilisé seulement si le provider Threads de la ROM
+     * est incompatible.
+     */
+    private fun legacyScanThreads(): List<ThreadRow> {
+        val rows = linkedMapOf<Long, ThreadRow>()
+        val unread = mutableMapOf<Long, Int>()
+        val projection = arrayOf(
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.READ,
+        )
+        context.contentResolver.query(
+            Telephony.Sms.CONTENT_URI, projection, null, null,
+            "${Telephony.Sms.DATE} DESC",
+        )?.use { c ->
+            val iThread = c.getColumnIndexOrThrow(Telephony.Sms.THREAD_ID)
+            val iAddress = c.getColumnIndexOrThrow(Telephony.Sms.ADDRESS)
+            val iBody = c.getColumnIndexOrThrow(Telephony.Sms.BODY)
+            val iDate = c.getColumnIndexOrThrow(Telephony.Sms.DATE)
+            val iRead = c.getColumnIndexOrThrow(Telephony.Sms.READ)
+            while (c.moveToNext()) {
+                val threadId = c.getLong(iThread)
+                if (c.getInt(iRead) == 0) unread[threadId] = (unread[threadId] ?: 0) + 1
+                if (!rows.containsKey(threadId)) {
+                    rows[threadId] = ThreadRow(
+                        threadId = threadId,
+                        address = c.getString(iAddress).orEmpty(),
+                        snippet = c.getString(iBody).orEmpty(),
+                        date = c.getLong(iDate),
+                        unread = 0,
+                    )
+                }
+            }
+        }
+        return rows.values.map { it.copy(unread = unread[it.threadId] ?: 0) }
     }
 
     /** Compte les non-lus par fil en une seule requête filtrée (peu de lignes). */
@@ -381,42 +431,6 @@ class SmsRepository @Inject constructor(
             }
         }
         return out
-    }
-
-    /**
-     * Adresse canonique d'un fil à partir de ses recipient_ids (cache en mémoire).
-     * La table canonical-addresses n'a pas de classe dans le SDK public :
-     * on passe par son URI directe et les colonnes CanonicalAddressesColumns.
-     */
-    private fun canonicalAddress(recipientIds: String): String {
-        if (recipientIds.isBlank()) return ""
-        canonicalCache[recipientIds]?.let { return it }
-        val ids = recipientIds.trim().split(" ").filter { it.isNotBlank() }
-        if (ids.isEmpty()) return ""
-        val address = try {
-            val placeholders = ids.joinToString(",") { "?" }
-            context.contentResolver.query(
-                Uri.parse("content://mms-sms/canonical-addresses"),
-                arrayOf(
-                    Telephony.CanonicalAddressesColumns._ID,
-                    Telephony.CanonicalAddressesColumns.ADDRESS,
-                ),
-                "${Telephony.CanonicalAddressesColumns._ID} IN ($placeholders)",
-                ids.toTypedArray(),
-                null,
-            )?.use { c ->
-                val iAddr = c.getColumnIndexOrThrow(
-                    Telephony.CanonicalAddressesColumns.ADDRESS,
-                )
-                buildList {
-                    while (c.moveToNext()) add(c.getString(iAddr).orEmpty())
-                }.filter { it.isNotBlank() }.joinToString(", ")
-            }.orEmpty()
-        } catch (e: SecurityException) {
-            ""
-        }
-        canonicalCache[recipientIds] = address
-        return address
     }
 
     private fun queryThreadMessages(threadId: Long, limit: Int? = null): List<Message> {
