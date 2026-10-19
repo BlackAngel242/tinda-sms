@@ -239,4 +239,15 @@
     <string name="otp_badge">CODE 2FA</string>
     <string name="recent_messages">RECENT MESSAGES</string>
     <string name="sim_dot_description">SIM %1$d</string>
+    <string name="settings_subtitle">SMS engine &amp; offline network management</string>
+    <string name="settings_section_prefs">Preferences</string>
+    <string name="settings_section_automation">Automation &amp; rules</string>
+    <string name="settings_section_security">Security &amp; privacy</string>
+    <string name="settings_dualsim_title">Dual SIM &amp; Smart Routing</string>
+    <string name="settings_dualsim_subtitle">100% SMS engine, offline</string>
+    <string name="settings_sim_label">SIM %1$d</string>
+    <string name="settings_advanced_desc">Gestures, diagnostics, archived</string>
+    <string name="settings_diagnostic_desc">Check the SMS role and sending</string>
+    <string name="settings_version">Tinda SMS v%1$s</string>
+    <string name="settings_ondevice">Encrypted &amp; stored on-device</string>
 </resources>

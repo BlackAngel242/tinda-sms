@@ -2,14 +2,19 @@ package tech.dmampro.tinda.ui.newmessage
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -17,26 +22,34 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -51,6 +64,16 @@ import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.sms.SmsSender
+import tech.dmampro.tinda.theme.RadiantBg
+import tech.dmampro.tinda.theme.RadiantOnPrimary
+import tech.dmampro.tinda.theme.RadiantPrimary
+import tech.dmampro.tinda.theme.RadiantSim1
+import tech.dmampro.tinda.theme.RadiantSim2
+import tech.dmampro.tinda.theme.RadiantSurface
+import tech.dmampro.tinda.theme.RadiantSurfaceLow
+import tech.dmampro.tinda.theme.RadiantText
+import tech.dmampro.tinda.theme.RadiantTextSecondary
+import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
@@ -122,7 +145,7 @@ class NewConversationViewModel @Inject constructor(
     }
 }
 
-/** Nouveau message : destinataire, SIM visible, texte, envoi (US-001). */
+/** Nouveau message : destinataire, SIM visible, texte, envoi (US-001). Style Radiant Slate. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewConversationScreen(
@@ -144,24 +167,49 @@ fun NewConversationScreen(
     }
 
     Scaffold(
+        containerColor = RadiantBg,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.new_conversation_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                title = {
+                    Column {
+                        Text(
+                            "TINDA SMS",
+                            color = RadiantPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 2.sp,
+                        )
+                        Text(
+                            stringResource(R.string.new_conversation_title),
+                            color = RadiantText,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = RadiantText,
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = RadiantBg),
             )
         },
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(RadiantBg)
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            // Espacement resserré : fini l'espace mort entre les blocs.
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // Destinataire : carte Radiant.
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
@@ -177,35 +225,65 @@ fun NewConversationScreen(
                         Icon(
                             Icons.Filled.Contacts,
                             contentDescription = stringResource(R.string.groupsend_pick_contacts),
+                            tint = RadiantPrimary,
                         )
                     }
                 },
                 shape = RoundedCornerShape(16.dp),
+                colors = radiantTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
+            // SIM : pastilles avec point couleur.
             if (uiState.sims.size > 1) {
-                Text(
-                    stringResource(R.string.sim_choose),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    uiState.sims.forEach { sim ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.sim_choose),
+                        color = RadiantTextSecondary,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                    uiState.sims.forEachIndexed { index, sim ->
+                        val simColor = if (index == 0) RadiantSim1 else RadiantSim2
                         FilterChip(
                             selected = sim.subscriptionId == uiState.selectedSimId,
                             onClick = { viewModel.onSimSelected(sim.subscriptionId) },
-                            label = { Text(sim.displayName) },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(simColor),
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        sim.displayName,
+                                        color = if (sim.subscriptionId == uiState.selectedSimId)
+                                            RadiantOnPrimary else RadiantText,
+                                    )
+                                }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = RadiantPrimary,
+                                containerColor = RadiantSurfaceLow,
+                            ),
+                            border = null,
                         )
                     }
                 }
             }
+            // Message : hauteur contenue, pas d'étirement artificiel.
             OutlinedTextField(
                 value = body,
                 onValueChange = { body = it },
                 label = { Text(stringResource(R.string.message_hint)) },
                 shape = RoundedCornerShape(16.dp),
+                colors = radiantTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .heightIn(min = 120.dp, max = 280.dp),
             )
             if (uiState.sendError) {
                 Text(
@@ -214,21 +292,45 @@ fun NewConversationScreen(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Spacer(Modifier.height(4.dp))
+            // Envoi : bouton teal pleine largeur.
             Button(
                 onClick = { viewModel.send(address, body, onThreadOpened) },
                 enabled = !uiState.sending,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RadiantPrimary,
+                    contentColor = RadiantOnPrimary,
+                    disabledContainerColor = RadiantSurface,
+                    disabledContentColor = RadiantTextTertiary,
+                ),
+                shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
                 Text(
                     stringResource(R.string.send),
+                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(start = 8.dp),
                 )
             }
         }
     }
 }
+
+/** Couleurs de champ Radiant pour les OutlinedTextField. */
+@Composable
+private fun radiantTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = RadiantSurfaceLow,
+    unfocusedContainerColor = RadiantSurfaceLow,
+    disabledContainerColor = RadiantSurfaceLow,
+    errorContainerColor = RadiantSurfaceLow,
+    focusedTextColor = RadiantText,
+    unfocusedTextColor = RadiantText,
+    focusedLabelColor = RadiantPrimary,
+    unfocusedLabelColor = RadiantTextSecondary,
+    cursorColor = RadiantPrimary,
+    focusedBorderColor = RadiantPrimary,
+    unfocusedBorderColor = RadiantTextTertiary.copy(alpha = 0.3f),
+)
 
 /**
  * Lit le numéro de téléphone d'un contact choisi via le sélecteur natif.

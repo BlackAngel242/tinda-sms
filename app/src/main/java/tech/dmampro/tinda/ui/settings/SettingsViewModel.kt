@@ -6,15 +6,20 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.AppLanguage
 import tech.dmampro.tinda.data.BlockRepository
 import tech.dmampro.tinda.data.PrefsRepository
+import tech.dmampro.tinda.data.SimInfo
+import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.VaultRepository
+import tech.dmampro.tinda.sms.ScheduledSmsManager
 import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.SwipeAction
@@ -34,6 +39,8 @@ class SettingsViewModel @Inject constructor(
     private val smsRepository: SmsRepository,
     private val blockRepository: BlockRepository,
     private val vaultRepository: VaultRepository,
+    private val simRepository: SimRepository,
+    private val scheduledManager: ScheduledSmsManager,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -47,6 +54,21 @@ class SettingsViewModel @Inject constructor(
     val appLanguage: Flow<String> = prefs.appLanguage
     val blockedCount: Flow<Int> = blockRepository.observeBlocked()
         .map { it.size }
+
+    /** SIM actives (carte Double SIM de l'en-tête). */
+    private val _sims = MutableStateFlow<List<SimInfo>>(emptyList())
+    val sims: StateFlow<List<SimInfo>> = _sims.asStateFlow()
+
+    /** Nombre de SMS programmés en attente (badge). */
+    val pendingScheduledCount: StateFlow<Int> = scheduledManager.observeAll()
+        .map { list -> list.count { it.status.name == "PENDING" } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
+
+    init {
+        viewModelScope.launch {
+            _sims.value = simRepository.getActiveSims()
+        }
+    }
 
     val archivedItems: StateFlow<List<ArchivedItem>> =
         smsRepository.observeArchivedThreads()

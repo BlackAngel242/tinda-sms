@@ -6,8 +6,8 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Format court d'une date de message : heure aujourd'hui, "Hier" hier,
- * sinon jj/MM/aa. Pur Kotlin (hors contexte) pour rester testable.
+ * Format court d'une date de message : heure aujourd'hui, "Hier HH:mm" hier,
+ * sinon jj/MM/aa HH:mm. Pur Kotlin (hors contexte) pour rester testable.
  */
 object TimeFormat {
 
@@ -19,11 +19,11 @@ object TimeFormat {
         val now = Calendar.getInstance()
         val then = Calendar.getInstance().apply { timeInMillis = epochMillis }
         val timeFmt = SimpleDateFormat("HH:mm", locale)
-        val dateFmt = SimpleDateFormat("dd/MM/yy", locale)
+        val dateTimeFmt = SimpleDateFormat("dd/MM/yy HH:mm", locale)
         return when {
             isSameDay(now, then) -> timeFmt.format(Date(epochMillis))
-            isYesterday(now, then) -> yesterdayLabel
-            else -> dateFmt.format(Date(epochMillis))
+            isYesterday(now, then) -> "$yesterdayLabel ${timeFmt.format(Date(epochMillis))}"
+            else -> dateTimeFmt.format(Date(epochMillis))
         }
     }
 

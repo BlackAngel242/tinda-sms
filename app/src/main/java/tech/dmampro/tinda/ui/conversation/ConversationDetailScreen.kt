@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,7 +65,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -188,6 +191,8 @@ fun ConversationDetailScreen(
                 draft = draft,
                 onDraftChange = viewModel::onDraftChange,
                 onSend = viewModel::send,
+                // Appui long sur le bouton d'envoi = programmer l'envoi.
+                onScheduleRequest = { showSchedule = draft.isNotBlank() },
                 sending = uiState.sending,
                 sendError = uiState.sendError,
                 sims = uiState.sims,
@@ -209,7 +214,6 @@ fun ConversationDetailScreen(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                item(key = "network") { NetworkPill(uiState.sims) }
                 dayGroups.forEach { group ->
                     item(key = "day-${group.startOfDay}") { DatePill(group.label) }
                     items(group.messages, key = { it.id }) { message ->
@@ -250,43 +254,6 @@ fun ConversationDetailScreen(
             },
             onDismiss = { showSchedule = false },
         )
-    }
-}
-
-/** Pilule d'info réseau : noms d'opérateurs réels via SubscriptionManager. */
-@Composable
-private fun NetworkPill(sims: List<SimInfo>) {
-    if (sims.isEmpty()) return
-    val text = if (sims.size >= 2) {
-        stringResource(R.string.network_pill_dual, sims[0].displayName, sims[1].displayName)
-    } else {
-        stringResource(R.string.network_pill_single, sims[0].displayName)
-    }
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(
-            modifier = Modifier
-                .background(RadiantSurface, RoundedCornerShape(50))
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Icon(
-                Icons.Filled.Smartphone,
-                contentDescription = null,
-                tint = RadiantPrimary,
-                modifier = Modifier.size(14.dp),
-            )
-            Text(
-                text,
-                style = MaterialTheme.typography.labelSmall,
-                color = RadiantTextSecondary,
-            )
-        }
     }
 }
 
@@ -539,6 +506,7 @@ private fun Composer(
     draft: String,
     onDraftChange: (String) -> Unit,
     onSend: () -> Unit,
+    onScheduleRequest: () -> Unit,
     sending: Boolean,
     sendError: Boolean,
     sims: List<SimInfo>,
@@ -547,6 +515,7 @@ private fun Composer(
     onSimSelected: (Int) -> Unit,
     segmentInfo: SmsEncoding.SegmentInfo,
 ) {
+    val haptics = LocalHapticFeedback.current
     Column(
         modifier = Modifier
             .navigationBarsPadding()
@@ -625,7 +594,15 @@ private fun Composer(
                         if (canSend) RadiantPrimary else RadiantSurfaceHigh,
                         CircleShape,
                     )
-                    .clickable(enabled = canSend, onClick = onSend),
+                    // Appui court = envoi immédiat, appui long = programmer.
+                    .combinedClickable(
+                        enabled = canSend,
+                        onClick = onSend,
+                        onLongClick = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onScheduleRequest()
+                        },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

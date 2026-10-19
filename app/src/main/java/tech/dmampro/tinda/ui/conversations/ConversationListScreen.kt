@@ -290,7 +290,7 @@ fun ConversationListScreen(
                     )
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         items(conversations, key = { it.threadId }) { item ->
                             SwipeableConversationRow(
@@ -591,7 +591,7 @@ private fun ConversationCard(
             .padding(horizontal = 16.dp),
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
