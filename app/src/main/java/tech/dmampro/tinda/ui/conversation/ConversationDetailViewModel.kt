@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.PrefsRepository
+import tech.dmampro.tinda.data.SimAssignmentRepository
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
@@ -48,6 +49,7 @@ class ConversationDetailViewModel @Inject constructor(
     private val db: TindaDatabase,
     private val soundPlayer: SendSoundPlayer,
     private val scheduler: ScheduledSmsManager,
+    private val simAssignment: SimAssignmentRepository,
 ) : ViewModel() {
 
     private val threadId: Long = savedStateHandle.get<Long>("threadId") ?: -1L
@@ -69,7 +71,9 @@ class ConversationDetailViewModel @Inject constructor(
             val address = repository.getThreadAddress(threadId)
             val name = repository.resolveDisplayName(address)
             val sims = simRepository.getActiveSims()
-            val selected = simRepository.getSimForThread(threadId)
+            // Priorité : attribution par contact (Stitch 2.1), puis par fil.
+            val byContact = simAssignment.getForAddress(address)
+            val selected = byContact ?: simRepository.getSimForThread(threadId)
             val draft = db.draftDao().get(draftKey())?.text.orEmpty()
             _uiState.update {
                 it.copy(
@@ -96,6 +100,11 @@ class ConversationDetailViewModel @Inject constructor(
     fun onSimSelected(subscriptionId: Int) {
         viewModelScope.launch {
             simRepository.setSimForThread(threadId, subscriptionId)
+            // Mémorise aussi par contact (Stitch 2.1).
+            val address = repository.getThreadAddress(threadId)
+            if (address.isNotBlank()) {
+                simAssignment.setForAddress(address, subscriptionId)
+            }
             _uiState.update { it.copy(selectedSimId = subscriptionId) }
         }
     }

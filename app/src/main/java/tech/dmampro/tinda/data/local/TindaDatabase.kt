@@ -152,6 +152,19 @@ data class SecretRule(
     val addedAt: Long,
 )
 
+/**
+ * Attribution SIM par contact (Stitch 2.1) : mémorise la SIM d'envoi
+ * pour un numéro normalisé. DEC-S2.
+ */
+@Entity(tableName = "sim_assignments")
+data class SimAssignment(
+    /** Numéro normalisé (chiffres, 9 derniers). */
+    @PrimaryKey val address: String,
+    /** subscriptionId de la SIM à utiliser. */
+    val subscriptionId: Int,
+    val updatedAt: Long,
+)
+
 /** Statut d'un SMS programmé (F9). */
 enum class ScheduledStatus {
     PENDING,
@@ -499,6 +512,22 @@ interface AutoDeleteDao {
     suspend fun setEnabled(id: Long, enabled: Boolean)
 }
 
+/** Attribution SIM par contact (Stitch 2.1). */
+@Dao
+interface SimAssignmentDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(assignment: SimAssignment)
+
+    @Query("DELETE FROM sim_assignments WHERE address = :address")
+    suspend fun delete(address: String)
+
+    @Query("SELECT subscriptionId FROM sim_assignments WHERE address = :address LIMIT 1")
+    suspend fun getForAddress(address: String): Int?
+
+    @Query("SELECT * FROM sim_assignments ORDER BY updatedAt DESC")
+    fun observeAll(): Flow<List<SimAssignment>>
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -592,8 +621,9 @@ fun toFtsMatch(input: String): String {
         ForwardRule::class,
         ForwardLog::class,
         AutoDeleteRule::class,
+        SimAssignment::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -610,6 +640,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun autoReplyStateDao(): AutoReplyStateDao
     abstract fun forwardDao(): ForwardDao
     abstract fun autoDeleteDao(): AutoDeleteDao
+    abstract fun simAssignmentDao(): SimAssignmentDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -691,6 +722,17 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
                 "name TEXT NOT NULL, enabled INTEGER NOT NULL, " +
                 "threadAddress TEXT NOT NULL, olderThanDays INTEGER NOT NULL, " +
                 "keepMinimum INTEGER NOT NULL)",
+        )
+    }
+}
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS sim_assignments (" +
+                "address TEXT PRIMARY KEY NOT NULL, " +
+                "subscriptionId INTEGER NOT NULL, " +
+                "updatedAt INTEGER NOT NULL)",
         )
     }
 }
