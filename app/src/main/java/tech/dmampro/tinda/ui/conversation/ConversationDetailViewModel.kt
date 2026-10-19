@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.PrefsRepository
 import tech.dmampro.tinda.data.SimAssignmentRepository
+import tech.dmampro.tinda.data.FavoriteRepository
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
@@ -35,6 +36,7 @@ data class DetailUiState(
     val sending: Boolean = false,
     val sendError: Boolean = false,
     val ready: Boolean = false,
+    val isFavorite: Boolean = false,
 )
 
 /** Fil de discussion : vraies données, envoi, SIM par conversation, brouillon auto. */
@@ -50,6 +52,7 @@ class ConversationDetailViewModel @Inject constructor(
     private val soundPlayer: SendSoundPlayer,
     private val scheduler: ScheduledSmsManager,
     private val simAssignment: SimAssignmentRepository,
+    private val favoriteRepository: FavoriteRepository,
 ) : ViewModel() {
 
     private val threadId: Long = savedStateHandle.get<Long>("threadId") ?: -1L
@@ -75,12 +78,14 @@ class ConversationDetailViewModel @Inject constructor(
             val byContact = simAssignment.getForAddress(address)
             val selected = byContact ?: simRepository.getSimForThread(threadId)
             val draft = db.draftDao().get(draftKey())?.text.orEmpty()
+            val isFav = favoriteRepository.isFavorite(address)
             _uiState.update {
                 it.copy(
                     displayName = name.ifBlank { address },
                     sims = sims,
                     selectedSimId = selected,
                     ready = true,
+                    isFavorite = isFav,
                 )
             }
             draftText.value = draft
@@ -106,6 +111,16 @@ class ConversationDetailViewModel @Inject constructor(
                 simAssignment.setForAddress(address, subscriptionId)
             }
             _uiState.update { it.copy(selectedSimId = subscriptionId) }
+        }
+    }
+
+    /** Bascule le statut favori du contact (maquette Stitch). */
+    fun toggleFavorite() {
+        viewModelScope.launch {
+            val address = repository.getThreadAddress(threadId)
+            if (address.isBlank()) return@launch
+            val isFav = favoriteRepository.toggleFavorite(address)
+            _uiState.update { it.copy(isFavorite = isFav) }
         }
     }
 

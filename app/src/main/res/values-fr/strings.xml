@@ -255,4 +255,6 @@
     <string name="stats_delivery">Délivrance GSM</string>
     <string name="stats_sim_sent">%1$d SMS envoyés</string>
     <string name="filter_otp">Codes 2FA</string>
+    <string name="favorite_toggle">Ajouter aux favoris</string>
+    <string name="otp_expires_in">Expire dans %1$d minutes</string>
 </resources>

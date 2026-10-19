@@ -535,6 +535,14 @@ data class PinnedThread(
     val pinnedAt: Long,
 )
 
+/** Contact favori (maquette Stitch : étoile dans l'en-tête du chat). */
+@Entity(tableName = "favorite_contacts")
+data class FavoriteContact(
+    /** Numéro normalisé (chiffres, 9 derniers). */
+    @PrimaryKey val address: String,
+    val addedAt: Long,
+)
+
 @Dao
 interface PinnedThreadDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -548,6 +556,21 @@ interface PinnedThreadDao {
 
     @Query("SELECT COUNT(*) FROM pinned_threads WHERE threadId = :threadId")
     suspend fun isPinned(threadId: Long): Int
+}
+
+@Dao
+interface FavoriteContactDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun add(favorite: FavoriteContact)
+
+    @Query("DELETE FROM favorite_contacts WHERE address = :address")
+    suspend fun remove(address: String)
+
+    @Query("SELECT COUNT(*) FROM favorite_contacts WHERE address = :address")
+    suspend fun isFavorite(address: String): Int
+
+    @Query("SELECT * FROM favorite_contacts ORDER BY addedAt DESC")
+    fun observeAll(): Flow<List<FavoriteContact>>
 }
 
 /**
@@ -645,6 +668,7 @@ fun toFtsMatch(input: String): String {
         AutoDeleteRule::class,
         SimAssignment::class,
         PinnedThread::class,
+        FavoriteContact::class,
     ],
     version = 10,
     exportSchema = false,
@@ -665,6 +689,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun autoDeleteDao(): AutoDeleteDao
     abstract fun simAssignmentDao(): SimAssignmentDao
     abstract fun pinnedThreadDao(): PinnedThreadDao
+    abstract fun favoriteContactDao(): FavoriteContactDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -762,6 +787,11 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
             "CREATE TABLE IF NOT EXISTS pinned_threads (" +
                 "threadId INTEGER PRIMARY KEY NOT NULL, " +
                 "pinnedAt INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS favorite_contacts (" +
+                "address TEXT PRIMARY KEY NOT NULL, " +
+                "addedAt INTEGER NOT NULL)",
         )
     }
 }

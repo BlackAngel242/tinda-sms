@@ -39,6 +39,8 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material3.AlertDialog
@@ -170,6 +172,13 @@ fun ConversationDetailScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = viewModel::toggleFavorite) {
+                        Icon(
+                            if (uiState.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
+                            contentDescription = stringResource(R.string.favorite_toggle),
+                            tint = if (uiState.isFavorite) RadiantPrimary else RadiantTextSecondary,
+                        )
+                    }
                     IconButton(
                         onClick = { showSchedule = draft.isNotBlank() },
                         enabled = draft.isNotBlank(),
@@ -470,6 +479,17 @@ private fun OtpCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = RadiantTextSecondary,
                 )
+                val expiryMinutes = remember(message.body) {
+                    OtpDetection.detectExpiryMinutes(message.body)
+                }
+                if (expiryMinutes != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.otp_expires_in, expiryMinutes),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = RadiantPrimary,
+                    )
+                }
             }
             // Accent rouge sur le bord droit, comme la maquette.
             Box(

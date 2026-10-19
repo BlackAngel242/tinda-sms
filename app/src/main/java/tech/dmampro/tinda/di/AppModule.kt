@@ -59,6 +59,9 @@ object AppModule {
     fun providePinnedThreadDao(db: TindaDatabase) = db.pinnedThreadDao()
 
     @Provides
+    fun provideFavoriteContactDao(db: TindaDatabase) = db.favoriteContactDao()
+
+    @Provides
     fun provideArchiveDao(db: TindaDatabase) = db.archiveDao()
 
     @Provides
