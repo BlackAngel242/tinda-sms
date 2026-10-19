@@ -85,6 +85,7 @@ data class NewMessageUiState(
     val sending: Boolean = false,
     val addressError: Boolean = false,
     val sendError: Boolean = false,
+    val drafts: List<tech.dmampro.tinda.data.local.Draft> = emptyList(),
 )
 
 @HiltViewModel
@@ -93,6 +94,7 @@ class NewConversationViewModel @Inject constructor(
     private val sender: SmsSender,
     private val simRepository: SimRepository,
     private val soundPlayer: SendSoundPlayer,
+    private val db: tech.dmampro.tinda.data.local.TindaDatabase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(NewMessageUiState())
@@ -106,6 +108,12 @@ class NewConversationViewModel @Inject constructor(
                     sims = sims,
                     selectedSimId = simRepository.getDefaultSubscriptionId(),
                 )
+            }
+        }
+        // Brouillons (maquette Stitch : "Brouillons (N)").
+        viewModelScope.launch {
+            db.draftDao().observeAll().collect { drafts ->
+                _uiState.update { it.copy(drafts = drafts) }
             }
         }
     }
