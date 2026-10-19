@@ -109,6 +109,22 @@ class SmsRepository @Inject constructor(
     fun observeArchivedThreads(): Flow<List<ArchivedThread>> =
         db.archiveDao().observeArchived()
 
+    /** Épingle/désépingle une conversation (maquette Stitch : "Pinned Threads"). */
+    suspend fun setThreadPinned(threadId: Long, pinned: Boolean) =
+        withContext(Dispatchers.IO) {
+            if (pinned) {
+                db.pinnedThreadDao().pin(
+                    tech.dmampro.tinda.data.local.PinnedThread(
+                        threadId,
+                        System.currentTimeMillis(),
+                    ),
+                )
+            } else {
+                db.pinnedThreadDao().unpin(threadId)
+            }
+            notifyChanged()
+        }
+
     /** Supprime un fil : provider système + miroir local (F5). */
     suspend fun deleteThread(threadId: Long) = withContext(Dispatchers.IO) {
         try {
@@ -309,6 +325,7 @@ class SmsRepository @Inject constructor(
             return emptyList()
         }
         val archived = db.archiveDao().archivedIds().toSet()
+        val pinned = db.pinnedThreadDao().pinnedIds().toSet()
         // Noms des contacts en parallèle : N requêtes séquentielles au
         // provider Contacts coûtaient plusieurs secondes sur gros carnet.
         return coroutineScope {
@@ -324,9 +341,12 @@ class SmsRepository @Inject constructor(
                             date = row.date,
                             unreadCount = row.unread,
                             subscriptionId = row.subscriptionId,
+                            pinned = row.threadId in pinned,
+                            messageCount = db.messageDao().countByThread(row.threadId),
                         )
                     }
                 }.awaitAll()
+                .sortedWith(compareByDescending<ConversationItem> { it.pinned }.thenByDescending { it.date })
         }
     }
 

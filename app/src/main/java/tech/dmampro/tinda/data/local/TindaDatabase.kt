@@ -528,6 +528,28 @@ interface SimAssignmentDao {
     fun observeAll(): Flow<List<SimAssignment>>
 }
 
+/** Conversation épinglée (maquette Stitch : "Pinned Threads"). */
+@Entity(tableName = "pinned_threads")
+data class PinnedThread(
+    @PrimaryKey val threadId: Long,
+    val pinnedAt: Long,
+)
+
+@Dao
+interface PinnedThreadDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun pin(thread: PinnedThread)
+
+    @Query("DELETE FROM pinned_threads WHERE threadId = :threadId")
+    suspend fun unpin(threadId: Long)
+
+    @Query("SELECT threadId FROM pinned_threads")
+    suspend fun pinnedIds(): List<Long>
+
+    @Query("SELECT COUNT(*) FROM pinned_threads WHERE threadId = :threadId")
+    suspend fun isPinned(threadId: Long): Int
+}
+
 /**
  * Recherche plein texte (F3) : requête brute (Room ne connaît pas la table
  * virtuelle, la validation statique est donc contournée volontairement).
@@ -622,6 +644,7 @@ fun toFtsMatch(input: String): String {
         ForwardLog::class,
         AutoDeleteRule::class,
         SimAssignment::class,
+        PinnedThread::class,
     ],
     version = 10,
     exportSchema = false,
@@ -641,6 +664,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun forwardDao(): ForwardDao
     abstract fun autoDeleteDao(): AutoDeleteDao
     abstract fun simAssignmentDao(): SimAssignmentDao
+    abstract fun pinnedThreadDao(): PinnedThreadDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -733,6 +757,11 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
                 "address TEXT PRIMARY KEY NOT NULL, " +
                 "subscriptionId INTEGER NOT NULL, " +
                 "updatedAt INTEGER NOT NULL)",
+        )
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS pinned_threads (" +
+                "threadId INTEGER PRIMARY KEY NOT NULL, " +
+                "pinnedAt INTEGER NOT NULL)",
         )
     }
 }

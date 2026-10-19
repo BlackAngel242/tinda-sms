@@ -32,6 +32,8 @@ data class ConversationItem(
     val date: Long,
     val unreadCount: Int,
     val subscriptionId: Int?,
+    val pinned: Boolean = false,
+    val messageCount: Int = 0,
 )
 
 /** Liste des conversations (lot 1 : vraies données ; lot 2 : recherche, gestes). */

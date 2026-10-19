@@ -56,6 +56,9 @@ object AppModule {
     fun provideSimAssignmentDao(db: TindaDatabase) = db.simAssignmentDao()
 
     @Provides
+    fun providePinnedThreadDao(db: TindaDatabase) = db.pinnedThreadDao()
+
+    @Provides
     fun provideArchiveDao(db: TindaDatabase) = db.archiveDao()
 
     @Provides
