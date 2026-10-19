@@ -77,6 +77,12 @@
     <string name="settings_blocklist">Liste noire</string>
     <string name="settings_blocklist_desc">Numéros bloqués et journal des blocages</string>
     <string name="settings_advanced">Options avancées</string>
+    <string name="settings_advanced_locked_title">Options avancées verrouillées</string>
+    <string name="settings_advanced_locked_desc">Saisissez le code du coffre ou utilisez la biométrie pour continuer.</string>
+    <string name="settings_advanced_bio_title">Déverrouiller les options avancées</string>
+    <string name="settings_advanced_use_biometric">Utiliser la biométrie</string>
+    <string name="vault_use_pin">Utiliser le code</string>
+    <string name="vault_unlock">Déverrouiller</string>
     <string name="settings_diagnostic">Diagnostic du rôle SMS</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Vérifie que le téléphone voit bien les 4 composants SMS de Tinda (ceux qu\'Android exige pour la liste des applis SMS par défaut). Faites une capture d\'écran du résultat.</string>

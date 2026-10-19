@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.AppLanguage
 import tech.dmampro.tinda.data.BlockRepository
 import tech.dmampro.tinda.data.PrefsRepository
+import tech.dmampro.tinda.data.VaultRepository
 import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.data.SwipeAction
@@ -32,6 +33,7 @@ class SettingsViewModel @Inject constructor(
     private val prefs: PrefsRepository,
     private val smsRepository: SmsRepository,
     private val blockRepository: BlockRepository,
+    private val vaultRepository: VaultRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -61,6 +63,23 @@ class SettingsViewModel @Inject constructor(
             prefs.setAppThemeId(id)
             EventLog.log("theme.set", id)
         }
+    }
+
+    /** Les options avancées sont verrouillées par le code du coffre (si créé). */
+    fun isAdvancedLocked(): Boolean = vaultRepository.isSetup()
+
+    fun isBiometricAvailable(): Boolean = vaultRepository.isBiometricAvailable()
+
+    fun verifyAdvancedPin(pin: String): Boolean {
+        val ok = vaultRepository.verifyPin(pin)
+        EventLog.log(if (ok) "settings.advanced_unlock_pin_ok" else "settings.advanced_unlock_pin_fail")
+        return ok
+    }
+
+    fun unlockAdvancedWithBiometric(): Boolean {
+        val ok = vaultRepository.unlockWithBiometric()
+        EventLog.log(if (ok) "settings.advanced_unlock_bio_ok" else "settings.advanced_unlock_bio_fail")
+        return ok
     }
 
     fun setThemeMode(mode: String) {

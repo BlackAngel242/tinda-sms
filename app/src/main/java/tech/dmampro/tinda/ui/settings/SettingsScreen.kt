@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -78,6 +79,8 @@ fun SettingsScreen(
     val archivedItems by viewModel.archivedItems.collectAsState()
 
     var advancedOpen by remember { mutableStateOf(false) }
+    var advancedUnlocked by remember { mutableStateOf(false) }
+    var showAdvancedLock by remember { mutableStateOf(false) }
     var archivedOpen by remember { mutableStateOf(false) }
     var gesturePicker by remember { mutableStateOf<SwipeAction?>(null) }
     var gestureSide by remember { mutableStateOf(true) } // true = gauche
@@ -301,10 +304,25 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { advancedOpen = !advancedOpen }
+                        .clickable {
+                            // Options avancées verrouillées par le code du coffre.
+                            if (!advancedOpen && !advancedUnlocked && viewModel.isAdvancedLocked()) {
+                                showAdvancedLock = true
+                            } else {
+                                advancedOpen = !advancedOpen
+                            }
+                        }
                         .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (!advancedOpen && viewModel.isAdvancedLocked() && !advancedUnlocked) {
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                     Text(
                         stringResource(R.string.settings_advanced),
                         style = MaterialTheme.typography.titleSmall,
@@ -449,6 +467,19 @@ fun SettingsScreen(
                     Text(stringResource(R.string.cancel))
                 }
             },
+        )
+    }
+
+    // Verrou des options avancées (code du coffre ou biométrie).
+    if (showAdvancedLock) {
+        AdvancedLockDialog(
+            viewModel = viewModel,
+            onUnlocked = {
+                showAdvancedLock = false
+                advancedUnlocked = true
+                advancedOpen = true
+            },
+            onDismiss = { showAdvancedLock = false },
         )
     }
 }

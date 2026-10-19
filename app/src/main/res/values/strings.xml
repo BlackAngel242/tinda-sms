@@ -77,6 +77,12 @@
     <string name="settings_blocklist">Blocklist</string>
     <string name="settings_blocklist_desc">Blocked numbers and block journal</string>
     <string name="settings_advanced">Advanced options</string>
+    <string name="settings_advanced_locked_title">Advanced options locked</string>
+    <string name="settings_advanced_locked_desc">Enter your vault PIN or use biometrics to continue.</string>
+    <string name="settings_advanced_bio_title">Unlock advanced options</string>
+    <string name="settings_advanced_use_biometric">Use biometrics</string>
+    <string name="vault_use_pin">Use PIN</string>
+    <string name="vault_unlock">Unlock</string>
     <string name="settings_diagnostic">SMS role diagnostic</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Checks that the phone properly sees Tinda\'s 4 SMS components (the ones Android requires for the default SMS app list). Take a screenshot of the result.</string>

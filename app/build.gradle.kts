@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+import java.util.Properties
+
 android {
     namespace = "tech.dmampro.tinda"
     compileSdk = 36
@@ -41,6 +43,26 @@ android {
         }
     }
 
+    // Signature debug permanente : le keystore auto-généré d'AGP ne survit
+    // pas aux redémarrages de la machine (clé perdue le 19 oct. 2026 ->
+    // INSTALL_FAILED_UPDATE_INCOMPATIBLE). Clé versionnée hors git dans
+    // keystore/, mots de passe dans keystore.properties (gitignoré).
+    val keystoreProps = Properties()
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    if (keystorePropsFile.exists()) {
+        keystorePropsFile.inputStream().use { keystoreProps.load(it) }
+    }
+    signingConfigs {
+        create("tindaDebug") {
+            storeFile = rootProject.file(
+                keystoreProps.getProperty("storeFile", "keystore/tinda-debug.keystore"),
+            )
+            storePassword = keystoreProps.getProperty("storePassword", "")
+            keyAlias = keystoreProps.getProperty("keyAlias", "tinda-debug")
+            keyPassword = keystoreProps.getProperty("keyPassword", "")
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -51,6 +73,7 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("tindaDebug")
             // Minification aussi en debug : l'APK passe de ~32 Mo à ~15 Mo,
             // téléchargeable sur connexion lente. R8 full mode : Hilt, Room
             // et Compose fournissent leurs règles via leurs AAR.
