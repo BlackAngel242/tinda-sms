@@ -298,6 +298,15 @@ interface MessageDao {
     @Query("SELECT COUNT(*) FROM messages WHERE threadId = :threadId")
     suspend fun countByThread(threadId: Long): Int
 
+    @Query("SELECT COUNT(*) FROM messages WHERE incoming = 0 AND subscriptionId = :subscriptionId")
+    suspend fun countOutgoingBySubscription(subscriptionId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM messages")
+    suspend fun countAll(): Int
+
+    @Query("SELECT COUNT(*) FROM messages WHERE status = :status")
+    suspend fun countByStatus(status: MessageStatus): Int
+
     /**
      * Messages candidats à la suppression auto : antérieurs à [cutoff],
      * non simulés (les simulations ne sont jamais dans le provider),
@@ -335,6 +344,9 @@ interface BlockDao {
 
     @Query("SELECT * FROM blocked_numbers ORDER BY addedAt DESC")
     fun observeBlocked(): Flow<List<BlockedNumber>>
+
+    @Query("SELECT COUNT(*) FROM blocked_numbers")
+    suspend fun countAll(): Int
 
     @Insert
     suspend fun logEvent(event: BlockEvent)

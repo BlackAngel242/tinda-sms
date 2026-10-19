@@ -250,4 +250,8 @@
     <string name="settings_diagnostic_desc">Vérifier le rôle SMS et l\'envoi</string>
     <string name="settings_version">Tinda SMS v%1$s</string>
     <string name="settings_ondevice">Chiffré &amp; stocké sur l\'appareil</string>
+    <string name="stats_sms">Messages SMS</string>
+    <string name="stats_blocked">Bloqués</string>
+    <string name="stats_delivery">Délivrance GSM</string>
+    <string name="stats_sim_sent">%1$d SMS envoyés</string>
 </resources>

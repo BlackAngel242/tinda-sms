@@ -110,6 +110,7 @@ fun SettingsScreen(
     val sims by viewModel.sims.collectAsState()
     val pendingScheduled by viewModel.pendingScheduledCount.collectAsState()
     val blockedCount by viewModel.blockedCount.collectAsState(initial = 0)
+    val stats by viewModel.stats.collectAsState()
 
     var advancedOpen by remember { mutableStateOf(false) }
     var advancedUnlocked by remember { mutableStateOf(false) }
@@ -168,7 +169,13 @@ fun SettingsScreen(
 
             // Carte Double SIM.
             item {
-                DualSimCard(sims = sims)
+                DualSimCard(sims = sims, stats = stats)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // Statistiques SMS (maquette Stitch).
+            item {
+                StatsRow(stats = stats)
                 Spacer(Modifier.height(8.dp))
             }
 
@@ -629,9 +636,52 @@ private fun RadiantChip(label: String, selected: Boolean, onClick: () -> Unit) {
     )
 }
 
+/** Ligne de statistiques SMS : total, bloqués, taux de délivrance (maquette Stitch). */
+@Composable
+private fun StatsRow(stats: SmsStats) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(RadiantSurfaceLow)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        StatItem(
+            value = "%,d".format(stats.total),
+            label = stringResource(R.string.stats_sms),
+        )
+        StatItem(
+            value = stats.blocked.toString(),
+            label = stringResource(R.string.stats_blocked),
+        )
+        StatItem(
+            value = "${stats.deliveryRate}%",
+            label = stringResource(R.string.stats_delivery),
+        )
+    }
+}
+
+@Composable
+private fun StatItem(value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value,
+            style = MaterialTheme.typography.titleLarge,
+            color = RadiantText,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = RadiantTextSecondary,
+        )
+    }
+}
+
 /** Carte Double SIM : SIM actives avec couleurs dédiées (rouge / ambre). */
 @Composable
-private fun DualSimCard(sims: List<SimInfo>) {
+private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -700,6 +750,15 @@ private fun DualSimCard(sims: List<SimInfo>) {
                         color = RadiantTextSecondary,
                         style = MaterialTheme.typography.bodySmall,
                     )
+                    val sentCount = stats.perSim[sim.subscriptionId] ?: 0
+                    if (sentCount > 0) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            stringResource(R.string.stats_sim_sent, sentCount),
+                            color = RadiantTextTertiary,
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 }
             }
         }

@@ -18,6 +18,7 @@ import tech.dmampro.tinda.data.BlockRepository
 import tech.dmampro.tinda.data.PrefsRepository
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
+import tech.dmampro.tinda.data.StatsRepository
 import tech.dmampro.tinda.data.VaultRepository
 import tech.dmampro.tinda.sms.ScheduledSmsManager
 import tech.dmampro.tinda.util.EventLog
@@ -41,6 +42,7 @@ class SettingsViewModel @Inject constructor(
     private val vaultRepository: VaultRepository,
     private val simRepository: SimRepository,
     private val scheduledManager: ScheduledSmsManager,
+    private val statsRepository: StatsRepository,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
@@ -64,9 +66,23 @@ class SettingsViewModel @Inject constructor(
         .map { list -> list.count { it.status.name == "PENDING" } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 
+    /** Statistiques SMS (maquette Stitch : compteurs par SIM, total, bloqués, délivrance). */
+    private val _stats = MutableStateFlow(SmsStats())
+    val stats: StateFlow<SmsStats> = _stats.asStateFlow()
+
     init {
         viewModelScope.launch {
             _sims.value = simRepository.getActiveSims()
+        }
+        viewModelScope.launch {
+            val sims = simRepository.getActiveSims()
+            val perSim = sims.associate { it.subscriptionId to statsRepository.sentCountForSim(it.subscriptionId) }
+            _stats.value = SmsStats(
+                total = statsRepository.totalCount(),
+                blocked = statsRepository.blockedCount(),
+                deliveryRate = statsRepository.deliveryRate(),
+                perSim = perSim,
+            )
         }
     }
 
@@ -139,3 +155,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { smsRepository.setThreadArchived(threadId, false) }
     }
 }
+
+/** Statistiques SMS affichées dans l'en-tête des paramètres (maquette Stitch). */
+data class SmsStats(
+    val total: Int = 0,
+    val blocked: Int = 0,
+    val deliveryRate: Int = 100,
+    val perSim: Map<Int, Int> = emptyMap(),
+)
