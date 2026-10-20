@@ -3,7 +3,10 @@
 Nouvelle application SMS Android, 100 % originale — **DMAM PRO TECH**.
 SMS uniquement (pas de MMS). Min Android 8.0 (API 26), cible Android 16 (API 36).
 
-> Spec complète : `~/workspace/your_files/prd-tinda-sms.md` (table ronde, décisions DEC-001 à DEC-010).
+> Spec complète : [docs/reference/prd-tinda-sms.md](docs/reference/prd-tinda-sms.md) (table ronde, décisions DEC-001 à DEC-010).
+> État réel des fonctionnalités : [docs/validation/matrice-fonctionnalites.md](docs/validation/matrice-fonctionnalites.md). Plan de reprise en cours : PR nº 1 du dépôt.
+
+État au 21 octobre 2026 : lots 0 à 4 codés (socle, téléphonie, recherche/thèmes/gestes/liste noire, automatismes F9/F10/F11/F14, coffre secret et suppression automatique), design « Radiant Slate » appliqué à la liste, au fil, aux paramètres et au nouveau message. Le bouclier anti-arnaque (lot 5) n'est pas codé : il attend son corpus de validation.
 
 ## Stack
 
@@ -37,14 +40,20 @@ SMS uniquement (pas de MMS). Min Android 8.0 (API 26), cible Android 16 (API 36)
 app/src/main/java/tech/dmampro/tinda/
   TindaApp.kt            # Application (Hilt, StrictMode en debug uniquement)
   MainActivity.kt        # Hôte Compose + navigation
-  theme/                 # Design system Material 3 original « Tinda »
+  theme/                 # Design system Material 3 original « Tinda » + Radiant Slate
   navigation/            # Routes + NavGraph
-  ui/conversations/      # Liste des conversations (lot 1 : données réelles)
-  ui/conversation/       # Fil de discussion (lot 1)
-  ui/settings/           # Paramètres : thèmes, gestes, son, liste noire (lot 2)
-  sms/                   # Receivers + activités du rôle « default SMS app »
-  data/local/            # Room + chiffrement du coffre (SQLCipher, lot 4)
-  util/                  # Logger sans PII
+  ui/conversations/      # Liste des conversations
+  ui/conversation/       # Fil de discussion
+  ui/newmessage/         # Nouveau message
+  ui/groupsend/          # Envoi groupé (F14)
+  ui/schedule/           # SMS programmés (F9), ui/autoreply/ (F10), ui/forward/ (F11)
+  ui/autodelete/         # Suppression automatique, ui/vault/ coffre secret
+  ui/settings/           # Paramètres : thèmes, gestes, son, liste noire, diagnostic
+  sms/                   # Receivers, envoi, workers + activités du rôle « default SMS app »
+  data/                  # Repositories (messages, coffre, blocage, statistiques)
+  data/local/            # Room (base principale v10) + coffre SQLCipher séparé
+  notifications/         # Notifications messages + notification déguisée du coffre
+  util/                  # Logger sans PII, journal d'événements, détection OTP
 ```
 
 ## Règles d'or
