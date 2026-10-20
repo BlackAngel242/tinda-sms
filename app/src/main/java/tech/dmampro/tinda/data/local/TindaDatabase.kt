@@ -654,6 +654,9 @@ fun toFtsMatch(input: String): String {
     return tokens.joinToString(" ") { "\"$it\"*" }
 }
 
+/** Version courante du schéma (source unique, utilisée par @Database et les tests). */
+const val DATABASE_VERSION = 10
+
 @Database(
     entities = [
         Conversation::class,
@@ -673,8 +676,8 @@ fun toFtsMatch(input: String): String {
         PinnedThread::class,
         FavoriteContact::class,
     ],
-    version = 10,
-    exportSchema = false,
+    version = DATABASE_VERSION,
+    exportSchema = true,
 )
 @TypeConverters(Converters::class)
 abstract class TindaDatabase : RoomDatabase() {
@@ -798,3 +801,17 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         )
     }
 }
+
+/**
+ * Chaîne complète des migrations supportées (P0-5) : de la version 3
+ * à la version courante, sans trou (continuité vérifiée par
+ * MigrationChainTest). Les versions 1 et 2 datent des lots 0 et 1,
+ * leurs schémas n'ont pas été archivés et aucune installation
+ * survivante ne les utilise : Room refusera de les ouvrir plutôt que
+ * d'effacer leurs données en silence.
+ */
+val ALL_MIGRATIONS: Array<Migration> = arrayOf(
+    MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
+    MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+    MIGRATION_9_10,
+)

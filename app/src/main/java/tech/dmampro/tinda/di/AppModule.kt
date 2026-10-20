@@ -7,21 +7,20 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import tech.dmampro.tinda.data.local.ALL_MIGRATIONS
 import tech.dmampro.tinda.data.local.FtsCallback
-import tech.dmampro.tinda.data.local.MIGRATION_3_4
-import tech.dmampro.tinda.data.local.MIGRATION_4_5
-import tech.dmampro.tinda.data.local.MIGRATION_5_6
-import tech.dmampro.tinda.data.local.MIGRATION_6_7
-import tech.dmampro.tinda.data.local.MIGRATION_7_8
-import tech.dmampro.tinda.data.local.MIGRATION_8_9
-import tech.dmampro.tinda.data.local.MIGRATION_9_10
 import tech.dmampro.tinda.data.local.TindaDatabase
 import javax.inject.Singleton
 
 /**
  * Graphe Hilt : seule la base Room est fournie ici (le reste utilise
- * @Inject constructor). destructiveMigration : la base n'est pas encore
- * publiée, le schéma peut être recréé entre les lots de dev.
+ * @Inject constructor).
+ *
+ * Migrations (P0-5) : aucun repli destructif. Le chemin supporté est
+ * la chaîne [ALL_MIGRATIONS] (versions 3 à 10) ; une base d'une autre
+ * version fait échouer l'ouverture plutôt que d'être effacée en
+ * silence. Les données des utilisateurs (règles, brouillons, SMS
+ * programmés, favoris) ne sont jamais sacrifiées pour un schéma.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -31,12 +30,7 @@ object AppModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): TindaDatabase =
         Room.databaseBuilder(context, TindaDatabase::class.java, "tinda.db")
-            .addMigrations(
-                MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
-                MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-                MIGRATION_9_10,
-            )
-            .fallbackToDestructiveMigration()
+            .addMigrations(*ALL_MIGRATIONS)
             .addCallback(FtsCallback())
             .build()
 

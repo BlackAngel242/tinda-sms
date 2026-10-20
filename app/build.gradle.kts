@@ -98,6 +98,11 @@ android {
     }
 }
 
+// Schémas Room exportés et versionnés (P0-5) : app/schemas/.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     val bom = platform(libs.androidx.compose.bom)
     implementation(bom)
