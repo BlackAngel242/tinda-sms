@@ -201,3 +201,100 @@ Signature automatique ; tags locaux mutualisés avec le bouclier ; sauvegarde/re
 - Prochaine action concrète.
 
 Ne pas annoncer « terminé » si seule l'implémentation est finie.
+
+## 9. Complément Claude intégré le 21 octobre 2026
+
+Source : Tinda-SMS_brief-Muse_fusion.txt transmis par SmokeSama, audit daté du 20 octobre au même SHA dfddee7. La PR et master ont été relus : base inchangée, PR toujours ouverte. Ce complément complète les sections précédentes. Les détails encore non reproduits restent des pistes à vérifier, sans certification implicite.
+
+### 9.1 Changement d'ordre : L0 puis correctifs courts de sécurité
+
+Après la référence L0, avancer d'abord sur les défauts de routage et de normalisation reproduits, puis notifications et thème. Développer ensuite les lots L1/L2/L3 selon leurs dépendances. Ne pas attendre adb pour écrire et exécuter les tests possibles ; la validation appareil reste une étape distincte.
+
+| Référence Claude | Contrôle / statut Codex | Lot / action |
+|---|---|---|
+| P0-1, C1 | Repli coffre/provider déjà confirmé | L1, inchangé |
+| E1 / P0-2 | Confirmé statiquement : adresse alphabétique devient vide et endsWith("") correspond à une règle numéro | Correctif immédiat, tests ci-dessous |
+| E2 / P0-3 | Modèle PIN déjà documenté ; absence de limitation signalée dans l'écran examiné | L1, ajouter protection d'essais et revue crypto |
+| P0-4 | Base ouverte/session déjà distinguées dans le plan | L1 |
+| E3 / P0-5 | Repli destructif confirmé, sans généraliser à toute erreur Room | L2 |
+| P0-6 | Fonction #PIN absente, écart PRD ; absence fonctionnelle distincte d'une vulnérabilité exploitable | Arbitrage DEC-005, pas d'implémentation immédiate |
+| E4 / P0-7 | Confirmé statiquement : BlockRepository ne retire que les blancs | Correctif normalisation et migration, L2 |
+| E5 / P0-8 | ForwardManager ne filtre pas les OTP et ne plafonne pas les transferts | L3, proposition de garde-fous et décision produit |
+| M1 | Cache mutable partagé signalé, accès async à reproduire | L4, test concurrence puis structure sûre minimale |
+| M2 | Requêtes par fil déjà vues, coût exact non mesuré | L4/L5, mesurer et grouper les compteurs avant debounce arbitraire |
+| M3 | Confirmé : même ID notification et même requestCode possibles pour fil/coffre | Correctif immédiat avec tests des deux identités |
+| M4 | Confirmé : initial lagoon dans MainActivity, défaut radiant dans PrefsRepository | Correctif immédiat, constante partagée et test |
+| M5 | Sous-ensemble ancien utilisé par la suppression, déjà couvert au plan | L2, comportement recommandé à faire arbitrer avant changement destructif |
+| M6 | Minima courts confirmés, risque de correspondance large | L1/L4, règles numériques exactes et aperçu ; pas de seuil universel improvisé |
+| M7 | Repli provider constructeur déjà connu | L5 AOSP + ROM ; pas de repli supprimé sans preuve |
+| M8 | Retour 0 HiOS déjà traité comme observation spécifique | L3 |
+| M9 | Clé hors git volontaire, CI et signature déjà cadrées | L0, aucune publication de secret |
+| M10 | Couverture des chemins sensibles insuffisante | Tests affectés aux lots ; nombre exact depuis exécution |
+| M11 | Base principale sans SQLCipher, périmètre de chiffrement à expliciter | Analyse de menace et arbitrage, distinct du coffre |
+| M12 | Envoi groupé : confirmation, coût et déduplication à vérifier en détail | L4, tests et garde-fous avant nouvel APK diffusé |
+
+### 9.2 Tâches et critères supplémentaires
+
+#### Routage alphabétique, tests avant correctif
+Fichier : data/VaultRepository.kt, matchesSecretRule.
+- [ ] Extraire au besoin le prédicat pur sans reproduire une couche complète de repository.
+- [ ] Avec une règle NUMBER existante et aucune règle KEYWORD correspondante : expéditeur alphabétique et normalisation vide ne correspondent jamais.
+- [ ] Avec une règle KEYWORD correspondante : cet expéditeur peut encore correspondre. Ne pas retourner false au début de toute la fonction, ce qui casserait les mots-clés.
+- [ ] Tester aussi adresse vide, chiffres avec séparateurs, préfixe international, numéro court et deux pays différents ayant le même suffixe.
+- [ ] Observer les tests échouer sur le prédicat actuel puis réussir après correction.
+- [ ] Ne pas adopter takeLast(9) comme identité universelle. Distinguer numéro international, format national avec contexte régional, code court et expéditeur alphabétique.
+
+#### Normalisation et migration
+Fichiers : data/BlockRepository.kt, data/VaultRepository.kt, data/SimAssignmentRepository.kt, data/FavoriteRepository.kt, sms/ForwardManager.kt, sms/AutoReplyMatching.kt, sms/AutoDeleteWorker.kt et DAO concernés.
+- [ ] Cartographier toutes les représentations et le besoin de chaque appelant. Une API partagée peut garder des traitements distincts par type d'adresse.
+- [ ] Tester équivalence locale/internationale avec contexte explicite et non-équivalence de pays distincts ; ne pas utiliser les exemples du brief comme preuve d'un plan de numérotation valide.
+- [ ] Préserver les expéditeurs alphanumériques qui peuvent être bloqués volontairement et les codes courts.
+- [ ] Migrer les clés stockées, gérer collisions et contraintes uniques sans perte de règles ni association SIM erronée.
+- [ ] Dédupliquer l'envoi groupé après canonicalisation et conserver la saisie originale pour affichage si nécessaire.
+
+#### Notification et thème
+Fichiers : notifications/NotificationHelper.kt, MainActivity.kt, data/PrefsRepository.kt, theme/TindaThemes.kt.
+- [ ] Tester que fil et coffre ne se remplacent ni ne s'annulent mutuellement.
+- [ ] Vérifier aussi l'identité PendingIntent : des extras différents ne suffisent pas à distinguer les deux. Définir une identité explicite pour l'ouverture du fil et celle du coffre.
+- [ ] Couvrir les identifiants Long de fils : une conversion en Int peut créer d'autres collisions.
+- [ ] Unifier le thème par défaut sans réécrire le thème choisi par l'utilisateur. Vérifier le tout premier affichage et le repli d'un identifiant inconnu.
+
+#### PIN, OTP, journaux et stockage principal
+- [ ] L1 : tester un délai progressif après échecs de PIN, concurrence, redémarrage du processus et horloge modifiée. Le nombre d'essais et les délais du brief sont des valeurs proposées, pas des décisions déjà prises. Aucun effacement de données.
+- [ ] L3 : proposer une confirmation claire du transfert de contenu sensible, gestion OTP par défaut prudente, limites de volume et comportement de suspension ; ne pas imposer arbitrairement 20/jour ni casser silencieusement une règle validée.
+- [ ] Ne pas présenter OtpDetection comme détecteur exhaustif : faux positifs et codes non détectés doivent rester explicites.
+- [ ] L4 : revue de la copie OTP : indicateur sensible quand supporté, compatibilité ancienne et effacement éventuel seulement si le presse-papiers contient encore la copie de Tinda. Ne pas supprimer un contenu copié ensuite par l'utilisateur.
+- [ ] L1/L2 : dresser les données de la base principale, FTS et fichiers de règles. Chiffrer seulement Room principal ne chiffre pas le provider SMS système. Ne pas promettre un historique entièrement protégé sur appareil compromis.
+- [ ] TindaLogger.e transmet directement la Throwable : confirmer qu'une exception peut divulguer des données. Préférer un événement autorisé et une classe d'erreur plutôt qu'une regex supposée nettoyer toutes les données personnelles.
+- [ ] EventLog : mesurer les écritures synchrones ; conserver un ordre et une rotation bornée si passage à IO, sans infrastructure superflue.
+- [ ] VaultRepository : tester deux ouvertures concurrentes et verrouillage pendant réception, pas seulement fermer l'ancienne instance en aveugle.
+
+### 9.3 Registre des constats faibles, à solder dans les lots
+
+| Référence | Suite exigée |
+|---|---|
+| F1 | L3/L5 : documenter boot après déverrouillage. Ne pas ajouter directBootAware seul : vérifier stockage accessible avant déverrouillage et politique d'envoi privée |
+| F2 | L0 : conserver le lien au PRD des alarmes exactes ; décisions sur permissions et fonctionnalité ensemble |
+| F3 | L3 : examiner RespondViaMessageService, thread principal, choix SIM et retour d'échec ; conserver la compatibilité du rôle SMS |
+| F4 | L4 : I/O des journaux, ordre et rotation bornée |
+| F5 | L1 : cycle de vie Room et concurrence |
+| F6 | L4/L5 : volume de fil, pagination ou limite seulement après mesure et tests de navigation |
+| F7 | L4 : presse-papiers OTP et respect du contenu plus récent |
+| F8 | L1 : Throwable et absence de données personnelles dans les logs |
+| F9 | L0 : conventions de documentation sans remodeler le code sans nécessité |
+| F10 | L0/L1 : commentaires historiques trompeurs, préremplissage ComposeSmsActivity à vérifier |
+| F11 | Pas de migration hilt-work par principe : indisponibilité hors ligne déjà documentée ; conserver EntryPoint tant qu'aucun défaut concret ne justifie son remplacement |
+
+### 9.4 Corrections de lecture et décisions
+
+- Le verdict de l'annexe B « RB-01 respectée partout » est contredit par P0-1 dans le même brief. Conserver ce dernier comme défaut confirmé.
+- « Aucun secret dans tout l'historique » ne se prouve pas par l'absence de valeurs dans deux propriétés Gradle : ne pas reprendre cette certification sans contrôle dédié.
+- Les seuils de mots-clés, longueur de numéro, plafond de transfert, délai de refresh et nombre d'essais sont des propositions. Justifier leurs valeurs et leur compatibilité.
+- Ne pas confondre « aucun build de l'audit » et « aucun build du projet » : les exécutions antérieures restent rapportées par Muse.
+- Les propositions D4 (conservation de N) et D5 (chiffrement principal) s'ajoutent aux arbitrages du tableau section 6. Présenter recommandations et conséquences, pas sept questions bloquant tout le chantier.
+- Le brief ancien interdit toute poussée sans autorisation, alors que le prompt de SmokeSama autorise les branches et PR de travail : appliquer les instructions directes les plus récentes. Elles n'autorisent toujours pas fusion, publication ni installation destructive.
+- Ne pas attendre une validation terrain totale de L1 avant de travailler sur les tests indépendants L3 ; aucune fonction non validée n'est pour autant présentée comme prête à diffuser.
+
+### 9.5 Prochaine action Muse
+
+Lire ce complément avant d'exécuter le plan. Reprendre au premier livrable non réalisé ; si L0 est déjà fait, le vérifier et ne pas le refaire. Commencer par le prédicat de routage alphabétique et les tests de normalisation, puis notifications/thème et migrations. Pour chaque constat externe non vérifié ici, rapporter confirmé / infirmé / à reproduire avec preuve, avant correction.
