@@ -1,0 +1,48 @@
+package tech.dmampro.tinda.sms
+
+import tech.dmampro.tinda.data.local.MessageStatus
+
+/**
+ * Verdict d'émission d'un segment de SMS multipart.
+ *
+ * - PENDING : aucun accusé reçu pour ce segment.
+ * - CONFIRMED : l'opérateur a confirmé l'émission du segment.
+ * - FAILED : échec documenté (code d'erreur radio connu).
+ * - UNCONFIRMED : un accusé est arrivé mais ne prouve ni le succès ni
+ *   l'échec (par exemple resultCode 0 hors ROM où ce comportement est
+ *   observé et documenté). Le message reste « non confirmé ».
+ */
+enum class PartSentState { PENDING, CONFIRMED, FAILED, UNCONFIRMED }
+
+/** État connu d'un segment : verdict d'émission et livraison éventuelle. */
+data class PartOutcome(
+    val sent: PartSentState = PartSentState.PENDING,
+    val delivered: Boolean = false,
+)
+
+/**
+ * Agrégation des accusés segment par segment (L3, corrige C4).
+ *
+ * Règles :
+ * - un échec documenté d'un segment fait échouer le message entier ;
+ * - SENT exige la confirmation de tous les segments ;
+ * - DELIVERED exige en plus la livraison de tous les segments ;
+ * - tant qu'un verdict manque ou n'est pas concluant, le message reste
+ *   SENDING (non confirmé), jamais promu par supposition ;
+ * - le statut est monotone : DELIVERED et FAILED sont terminaux, un
+ *   accusé tardif ou en double ne fait jamais régresser le statut.
+ */
+object MultipartStatus {
+
+    fun aggregate(parts: List<PartOutcome>, current: MessageStatus): MessageStatus {
+        if (current == MessageStatus.DELIVERED || current == MessageStatus.FAILED) {
+            return current
+        }
+        if (parts.isEmpty()) return current
+        if (parts.any { it.sent == PartSentState.FAILED }) return MessageStatus.FAILED
+        val allConfirmed = parts.all { it.sent == PartSentState.CONFIRMED }
+        if (!allConfirmed) return MessageStatus.SENDING
+        if (parts.all { it.delivered }) return MessageStatus.DELIVERED
+        return MessageStatus.SENT
+    }
+}
