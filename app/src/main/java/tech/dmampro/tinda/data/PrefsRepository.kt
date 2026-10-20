@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import tech.dmampro.tinda.theme.DEFAULT_THEME_ID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -48,9 +49,9 @@ class PrefsRepository @Inject constructor(
 
     // ---- Thème (F4) ----
 
-    /** Identifiant du thème choisi ("radiant" par défaut). */
+    /** Identifiant du thème choisi ([DEFAULT_THEME_ID] par défaut). */
     val appThemeId: Flow<String> =
-        store.data.map { it[KEY_THEME_ID] ?: "radiant" }
+        store.data.map { it[KEY_THEME_ID] ?: DEFAULT_THEME_ID }
 
     suspend fun setAppThemeId(id: String) {
         store.edit { it[KEY_THEME_ID] = id }

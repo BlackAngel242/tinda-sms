@@ -78,6 +78,13 @@ private fun tindaScheme(
     return AppThemeSpec(id, labelRes, light, dark)
 }
 
+/**
+ * Thème par défaut unique (M4) : premier affichage, valeur par défaut
+ * des préférences et repli d'un identifiant inconnu partagent cette
+ * seule source. Radiant Slate, la base graphique Stitch du projet.
+ */
+const val DEFAULT_THEME_ID = "radiant"
+
 /** Les thèmes originaux de Tinda (F4). Aucun asset repris d'une autre app. */
 val TINDA_THEMES: List<AppThemeSpec> = listOf(
     // Radiant Slate en premier : thème phare (design Stitch, 19 oct. 2026).
@@ -160,6 +167,8 @@ val TINDA_THEMES: List<AppThemeSpec> = listOf(
     ),
 )
 
-/** Thème par identifiant, "lagoon" par défaut. */
+/** Thème par identifiant, [DEFAULT_THEME_ID] en repli. */
 fun themeById(id: String): AppThemeSpec =
-    TINDA_THEMES.find { it.id == id } ?: TINDA_THEMES.first()
+    TINDA_THEMES.find { it.id == id }
+        ?: TINDA_THEMES.find { it.id == DEFAULT_THEME_ID }
+        ?: TINDA_THEMES.first()

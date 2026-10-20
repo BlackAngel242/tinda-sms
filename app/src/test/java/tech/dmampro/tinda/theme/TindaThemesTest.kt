@@ -29,6 +29,16 @@ class TindaThemesTest {
     }
 
     @Test
+    fun defaultTheme_isRadiantSharedAndFirst() {
+        // M4 : une seule source pour le thème par défaut (premier
+        // affichage, préférences, repli). « lagoon » ne doit plus
+        // apparaître comme valeur initiale nulle part.
+        assertEquals("radiant", DEFAULT_THEME_ID)
+        assertEquals(DEFAULT_THEME_ID, TINDA_THEMES.first().id)
+        assertEquals(DEFAULT_THEME_ID, themeById("inexistant").id)
+    }
+
+    @Test
     fun lightAndDarkDiffer() {
         TINDA_THEMES.forEach { theme ->
             assertNotEquals(

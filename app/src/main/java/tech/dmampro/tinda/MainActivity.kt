@@ -22,6 +22,7 @@ import tech.dmampro.tinda.navigation.Routes
 import tech.dmampro.tinda.navigation.TindaNavGraph
 import tech.dmampro.tinda.theme.ThemeMode
 import tech.dmampro.tinda.theme.TindaTheme
+import tech.dmampro.tinda.theme.DEFAULT_THEME_ID
 import tech.dmampro.tinda.theme.themeById
 import javax.inject.Inject
 
@@ -46,7 +47,7 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             // Thème choisi dans les paramètres (F4) : aperçu instantané.
-            val themeId by prefs.appThemeId.collectAsState(initial = "lagoon")
+            val themeId by prefs.appThemeId.collectAsState(initial = DEFAULT_THEME_ID)
             val modeId by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM.id)
             val dynamic by prefs.dynamicColor.collectAsState(initial = true)
             val dark = when (ThemeMode.byId(modeId)) {
