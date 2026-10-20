@@ -7,7 +7,7 @@ Responsabilités : Muse développe ; Codex relit et coordonne ; SmokeSama arbitr
 
 **Objectif :** sécuriser les données et rendre les statuts fiables avant les finitions Radiant Slate.
 **Architecture :** conserver Kotlin, Compose, Room, Hilt, WorkManager et SQLCipher. Séparer la session du coffre, le stockage de fond et le suivi durable des envois.
-**Spécification :** [dossier de Muse](../reference/dossier-muse-2026-10-20.md), AGENTS.md et décisions approuvées par SmokeSama. Le présent plan propose des corrections, sans remplacer un arbitrage produit.
+**Spécification :** [dossier de Muse](../../reference/dossier-muse-2026-10-20.md), AGENTS.md et décisions approuvées par SmokeSama. Le présent plan propose des corrections, sans remplacer un arbitrage produit.
 
 ## 1. Comparaison et limites des preuves
 
