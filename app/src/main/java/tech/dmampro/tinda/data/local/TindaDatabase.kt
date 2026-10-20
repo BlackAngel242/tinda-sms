@@ -355,8 +355,8 @@ interface BlockDao {
     @Query("DELETE FROM blocked_numbers WHERE number = :number")
     suspend fun unblock(number: String)
 
-    @Query("SELECT COUNT(*) FROM blocked_numbers WHERE number = :number")
-    suspend fun isBlocked(number: String): Int
+    @Query("SELECT number FROM blocked_numbers")
+    suspend fun getAllNumbers(): List<String>
 
     @Query("SELECT * FROM blocked_numbers ORDER BY addedAt DESC")
     fun observeBlocked(): Flow<List<BlockedNumber>>
