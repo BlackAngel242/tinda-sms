@@ -1,6 +1,8 @@
 # Protocole UI/UX Tinda SMS
 
-Instruction de SmokeSama du 21 octobre 2026. Direction de référence : **Radiant Slate** (fond #0B0F14, surfaces #121820 / #1A222D / #242E3D, primaire sarcelle #00D2B4, textes #F3F5F7 / #94A3B8 / #64748B, bulles sortantes en dégradé sarcelle, coins 20dp avec queue 4dp, formes en pilule). Toute retouche graphique préserve la logique SMS et coffre : aucun changement de logique sensible au titre d'une correction visuelle.
+Instruction de SmokeSama du 21 octobre 2026, précisée le même jour. Direction de référence : **Radiant Slate** (fond #0B0F14, surfaces #121820 / #1A222D / #242E3D, primaire sarcelle #00D2B4, textes #F3F5F7 / #94A3B8 / #64748B, bulles sortantes en dégradé sarcelle, coins 20dp avec queue 4dp, formes en pilule). Toute retouche graphique préserve la logique SMS et coffre : aucun changement de logique sensible au titre d'une correction visuelle.
+
+**Base graphique scellée (précision de SmokeSama)** : les maquettes Stitch et les menus qu'elles proposent, à l'accueil comme dans les paramètres (navigation basse Messages / Protection / Archivés / Paramètres, sections des paramètres, cartes SIM, statistiques), forment la référence figée de l'interface. Ce sont les backends qui suivent et s'adaptent à cette base, jamais l'inverse. L'amélioration et l'innovation se construisent par-dessus cette base, sans la dénaturer.
 
 ## Compétences : disponibilité réelle dans cet environnement
 
