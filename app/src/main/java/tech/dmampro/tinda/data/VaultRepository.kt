@@ -206,16 +206,7 @@ class VaultRepository @Inject constructor(
     suspend fun matchesSecretRule(address: String, body: String): Boolean {
         if (!isSetup()) return false
         val rules = mainDb.secretRuleDao().getAll()
-        if (rules.isEmpty()) return false
-        val normAddr = address.filter { it.isDigit() || it == '+' }
-        val lowerBody = body.lowercase()
-        return rules.any { rule ->
-            when (rule.type) {
-                RULE_NUMBER -> normAddr.endsWith(rule.value) || rule.value.endsWith(normAddr)
-                RULE_KEYWORD -> lowerBody.contains(rule.value)
-                else -> false
-            }
-        }
+        return SecretRuleMatching.matches(address, body, rules)
     }
 
     // ------------------------------------------------------------------
