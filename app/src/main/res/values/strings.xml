@@ -161,6 +161,11 @@
     <string name="scheduled_sent">sent</string>
     <string name="scheduled_cancelled">cancelled</string>
     <string name="scheduled_failed">failed</string>
+    <string name="scheduled_sending">sending</string>
+    <string name="scheduled_ambiguous">uncertain state</string>
+    <string name="scheduled_resend">Resend this message</string>
+    <string name="scheduled_resend_warning">This message may already have been sent: its sending was interrupted before the operator\'s verdict. Resending may create a duplicate for the recipient.</string>
+    <string name="scheduled_resend_confirm">Resend anyway</string>
     <string name="settings_scheduled">Scheduled SMS</string>
     <string name="settings_scheduled_desc">View and cancel deferred sends</string>
     <string name="settings_autoreply">Auto-reply</string>
@@ -181,6 +186,8 @@
     <string name="forward_keyword">Keyword</string>
     <string name="forward_destination">Destination number</string>
     <string name="forward_include_content">Include message text</string>
+    <string name="forward_allow_codes">Forward verification codes</string>
+    <string name="forward_allow_codes_hint">Off by default: a message containing a detected verification code is not forwarded and the hold is logged. Enable only for a trusted recipient.</string>
     <string name="forward_loop_warning">Safety: forwarding to the sender itself is forbidden to avoid loops.</string>
     <string name="forward_to">To %1$s</string>
     <string name="forward_source_number">No. %1$s</string>

@@ -70,6 +70,14 @@ class SmsSender @Inject constructor(
         )
         repository.notifyChanged()
 
+        // 1 bis. Suivi des segments (L3) : les accusés seront agrégés
+        // par segment, jamais appliqués un par un au statut du message.
+        db.messagePartDao().insertAll(
+            parts.indices.map { index ->
+                tech.dmampro.tinda.data.local.MessagePart(token = token, partIndex = index)
+            },
+        )
+
         try {
             // 2. Appel radio (lève une exception en cas d'échec immédiat).
             if (parts.size <= 1) {

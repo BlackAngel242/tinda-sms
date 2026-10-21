@@ -35,6 +35,7 @@ class BootReceiver : BroadcastReceiver() {
         val pending = goAsync()
         scope.launch {
             try {
+                scheduler.sweepAmbiguous()
                 scheduler.reschedulePending()
                 autoDeleteManager.reschedule()
                 TindaLogger.i(TAG, "travaux replanifiés après démarrage")

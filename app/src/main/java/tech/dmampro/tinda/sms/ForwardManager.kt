@@ -46,6 +46,17 @@ class ForwardManager @Inject constructor(
             if (!isForwardableDestination(rule.destination, address)) continue
             val now = System.currentTimeMillis()
             if (db.forwardDao().countRecent(rule.id, address, now - DEDUP_WINDOW_MS) > 0) continue
+            // Garde-fou P0-8 : un code de vérification détecté n'est
+            // transféré que si la règle l'autorise explicitement. La
+            // suspension est journalisée, jamais silencieuse.
+            if (!ForwardGuard.shouldForward(body, rule.allowVerificationCodes)) {
+                db.forwardDao().logForward(
+                    ForwardLog(rule.id, address, now, heldVerificationCode = true),
+                )
+                EventLog.log("forward.held_verification_code")
+                SendJournal.log("transfert : suspendu, code de vérification (règle ${rule.name})")
+                continue
+            }
             val text = buildForwardText(rule, address, body)
             try {
                 val destThreadId = repository.getOrCreateThreadId(rule.destination)

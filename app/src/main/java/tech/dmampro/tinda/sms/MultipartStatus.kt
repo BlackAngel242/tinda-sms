@@ -32,6 +32,34 @@ data class PartOutcome(
  * - le statut est monotone : DELIVERED et FAILED sont terminaux, un
  *   accusé tardif ou en double ne fait jamais régresser le statut.
  */
+/**
+ * Traduit un resultCode radio d'accusé d'émission en verdict de segment.
+ *
+ * - `-1` (Activity.RESULT_OK) : confirmé.
+ * - `0` (Activity.RESULT_CANCELED) : observé sur le terrain le
+ *   18 octobre 2026 sur un Redmi Note 14 (HyperOS, fabricant Xiaomi)
+ *   pour des envois réellement partis : il y vaut confirmation.
+ *   Partout ailleurs, ce code ne prouve ni succès ni échec : le
+ *   segment reste non confirmé. Les autres ROM (Tecno, Infinix,
+ *   Itel...) ne sont pas prouvées (hypothèse HYP-03 du PRD).
+ * - tout autre code : échec documenté, conservé pour le diagnostic.
+ *   La documentation Android expose des erreurs au-delà de 1 à 4 ;
+ *   aucun code inconnu n'est ignoré.
+ */
+fun sentVerdictForResultCode(
+    resultCode: Int,
+    zeroMeansSentOnThisRom: Boolean,
+): Pair<PartSentState, Int?> = when {
+    resultCode == -1 -> PartSentState.CONFIRMED to null
+    resultCode == 0 ->
+        if (zeroMeansSentOnThisRom) {
+            PartSentState.CONFIRMED to null
+        } else {
+            PartSentState.UNCONFIRMED to null
+        }
+    else -> PartSentState.FAILED to resultCode
+}
+
 object MultipartStatus {
 
     fun aggregate(parts: List<PartOutcome>, current: MessageStatus): MessageStatus {

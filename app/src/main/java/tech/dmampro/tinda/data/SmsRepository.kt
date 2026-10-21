@@ -21,7 +21,11 @@ import tech.dmampro.tinda.data.local.ArchivedThread
 import tech.dmampro.tinda.data.local.Conversation
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.data.local.ScheduledStatus
 import tech.dmampro.tinda.data.local.TindaDatabase
+import tech.dmampro.tinda.sms.MultipartStatus
+import tech.dmampro.tinda.sms.PartOutcome
+import tech.dmampro.tinda.sms.PartSentState
 import tech.dmampro.tinda.ui.conversations.ConversationItem
 import tech.dmampro.tinda.util.TindaLogger
 import javax.inject.Inject
@@ -305,6 +309,80 @@ class SmsRepository @Inject constructor(
             }
             notifyChanged()
         }
+
+    /**
+     * Enregistre le verdict d'émission d'un segment (L3) puis recalcule
+     * le statut du message par agrégation des segments. Un message créé
+     * avant le suivi par segment n'a aucune ligne de segment : repli
+     * sur l'ancien comportement direct pour ne pas le laisser bloqué.
+     */
+    suspend fun recordPartSent(
+        token: String,
+        partIndex: Int,
+        state: PartSentState,
+        failureCode: Int?,
+    ) = withContext(Dispatchers.IO) {
+        val updated = db.messagePartDao().updateSent(token, partIndex, state, failureCode)
+        if (updated == 0) {
+            when (state) {
+                PartSentState.CONFIRMED -> updateMessageStatus(token, MessageStatus.SENT)
+                PartSentState.FAILED ->
+                    updateMessageStatus(token, MessageStatus.FAILED, failureCode)
+                else -> Unit
+            }
+            resolveScheduled(token)
+        } else {
+            refreshAggregatedStatus(token)
+        }
+    }
+
+    /** Enregistre la livraison d'un segment (L3) puis recalcule le statut agrégé. */
+    suspend fun recordPartDelivered(token: String, partIndex: Int) =
+        withContext(Dispatchers.IO) {
+            val updated = db.messagePartDao().updateDelivered(token, partIndex)
+            if (updated == 0) {
+                updateMessageStatus(token, MessageStatus.DELIVERED)
+                resolveScheduled(token)
+            } else {
+                refreshAggregatedStatus(token)
+            }
+        }
+
+    private suspend fun refreshAggregatedStatus(token: String) {
+        val message = db.messageDao().findByToken(token) ?: return
+        val parts = db.messagePartDao().getByToken(token)
+        if (parts.isNotEmpty()) {
+            val newStatus = MultipartStatus.aggregate(
+                parts.map { PartOutcome(it.sentState, it.delivered) },
+                message.status,
+            )
+            if (newStatus != message.status) {
+                val failureCode = if (newStatus == MessageStatus.FAILED) {
+                    parts.firstOrNull { it.sentState == PartSentState.FAILED }?.failureCode
+                } else {
+                    null
+                }
+                updateMessageStatus(token, newStatus, failureCode)
+            }
+        }
+        resolveScheduled(token)
+    }
+
+    /**
+     * Résout un envoi programmé dont la tentative porte ce jeton (L3).
+     * Appelée après chaque accusé et juste après l'attache du jeton par
+     * le worker : les deux ordres d'arrivée convergent.
+     */
+    suspend fun resolveScheduled(token: String) = withContext(Dispatchers.IO) {
+        val message = db.messageDao().findByToken(token) ?: return@withContext
+        when (message.status) {
+            MessageStatus.SENT, MessageStatus.DELIVERED ->
+                db.scheduledMessageDao().resolveByToken(token, ScheduledStatus.SENT)
+            MessageStatus.FAILED ->
+                db.scheduledMessageDao().resolveByToken(token, ScheduledStatus.FAILED)
+            else -> Unit
+        }
+    }
 
     // ---- Lecture du provider ----
 

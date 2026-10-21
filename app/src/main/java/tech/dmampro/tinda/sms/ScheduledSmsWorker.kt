@@ -26,9 +26,13 @@ interface ScheduledWorkerEntryPoint {
 /**
  * Envoie un SMS programmé (F9) à l'échéance.
  *
- * Le worker relit la ligne : si elle n'est plus PENDING (annulée ou déjà
- * envoyée), il ne fait rien (idempotent). Si Tinda n'est plus l'appli SMS
- * par défaut, l'envoi est marqué FAILED plutôt que perdu.
+ * Cycle de vie (L3) : le worker prend la demande de façon atomique
+ * (PENDING -> SENDING) avant d'envoyer ; le retour de l'appel radio ne
+ * vaut pas « envoyé ». La ligne passe à SENT ou FAILED quand le
+ * verdict d'émission du message arrive (résolution par jeton dans le
+ * dépôt). Si le processus meurt entre l'appel radio et le verdict, la
+ * demande reste SENDING puis devient AMBIGUOUS au balayage : jamais de
+ * renvoi automatique d'un état incertain.
  */
 class ScheduledSmsWorker(
     context: Context,
@@ -55,17 +59,25 @@ class ScheduledSmsWorker(
             SendJournal.log("programmé : échec, pas appli par défaut")
             return Result.failure()
         }
+        // Prise atomique : si une autre exécution ou une annulation est
+        // passée entre la lecture et ici, claim vaut 0 et on n'envoie pas.
+        if (dao.claim(id, System.currentTimeMillis()) == 0) {
+            TindaLogger.i(TAG, "SMS programmé pris par un autre chemin")
+            return Result.success()
+        }
         return try {
             val threadId = entryPoint.repository().getOrCreateThreadId(item.address)
-            entryPoint.sender().send(
+            val result = entryPoint.sender().send(
                 address = item.address,
                 body = item.body,
                 subscriptionId = item.subscriptionId,
                 threadId = threadId,
                 deliveryReport = true,
             )
-            dao.updateStatus(id, ScheduledStatus.SENT)
-            SendJournal.log("programmé : envoyé")
+            dao.attachToken(id, result.token)
+            // Le verdict a pu arriver pendant l'appel : résolution immédiate.
+            entryPoint.repository().resolveScheduled(result.token)
+            SendJournal.log("programmé : émission lancée, en attente du verdict")
             Result.success()
         } catch (e: Exception) {
             TindaLogger.w(TAG, "échec d'envoi programmé")

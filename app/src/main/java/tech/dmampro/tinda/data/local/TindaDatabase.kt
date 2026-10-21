@@ -19,6 +19,7 @@ import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
+import tech.dmampro.tinda.sms.PartSentState
 
 /**
  * Base locale applicative (Room), version 3 (lot 2 : recherche FTS,
@@ -54,6 +55,13 @@ class Converters {
     @TypeConverter
     fun stringToScheduledStatus(value: String): ScheduledStatus =
         ScheduledStatus.valueOf(value)
+
+    @TypeConverter
+    fun partSentStateToString(state: PartSentState): String = state.name
+
+    @TypeConverter
+    fun stringToPartSentState(value: String): PartSentState =
+        PartSentState.valueOf(value)
 
     @TypeConverter
     fun scopeToString(scope: AutoReplyScope): String = scope.name
@@ -171,6 +179,16 @@ enum class ScheduledStatus {
     SENT,
     CANCELLED,
     FAILED,
+
+    /** Pris en charge par le worker, en attente du verdict d'émission (L3). */
+    SENDING,
+
+    /**
+     * L'envoi a été interrompu sans verdict connu (processus tué entre
+     * l'appel radio et l'accusé) : jamais de renvoi automatique, seul
+     * un renvoi manuel confirmé par l'utilisateur est possible (L3).
+     */
+    AMBIGUOUS,
 }
 
 /** Portée d'une règle de répondeur (F10). */
@@ -217,6 +235,8 @@ data class ForwardRule(
     val destination: String = "",
     /** true = transfère le texte original, false = simple notification. */
     val includeContent: Boolean = true,
+    /** Autorisation explicite de transférer les codes de vérification (P0-8). */
+    val allowVerificationCodes: Boolean = false,
 )
 
 /** Transferts déjà effectués (anti-boucle et déduplication, F11). */
@@ -228,6 +248,24 @@ data class ForwardLog(
     val ruleId: Long,
     val address: String,
     val sentAt: Long,
+    /** true = transfert suspendu par le garde-fou codes de vérification (P0-8). */
+    val heldVerificationCode: Boolean = false,
+)
+
+/**
+ * Suivi segment par segment d'un envoi multipart (L3) : un accusé ne
+ * vaut que pour son segment ; le statut du message est agrégé par
+ * MultipartStatus à partir de ces lignes. Clé : jeton du message et
+ * index du segment.
+ */
+@Entity(tableName = "message_parts", primaryKeys = ["token", "partIndex"])
+data class MessagePart(
+    val token: String,
+    val partIndex: Int,
+    val sentState: PartSentState = PartSentState.PENDING,
+    val delivered: Boolean = false,
+    /** Code d'erreur radio du segment en échec (diagnostic), sinon null. */
+    val failureCode: Int? = null,
 )
 
 /** Règle de suppression automatique (lot 4). */
@@ -256,6 +294,10 @@ data class ScheduledMessage(
     val subscriptionId: Int = -1,
     val status: ScheduledStatus = ScheduledStatus.PENDING,
     val createdAt: Long,
+    /** Jeton du message créé par la tentative d'envoi (L3), null avant envoi. */
+    val attemptToken: String? = null,
+    /** Début de la tentative en cours (epoch ms), pour détecter les envois orphelins. */
+    val attemptStartedAt: Long? = null,
 )
 
 /** Résultat de recherche plein texte : extrait avec marqueurs de surlignage. */
@@ -423,6 +465,67 @@ interface ScheduledMessageDao {
 
     @Query("DELETE FROM scheduled_messages WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /**
+     * Prise en charge atomique (L3) : ne réussit (1 ligne) que si la
+     * demande est encore PENDING. 0 ligne = déjà prise, annulée ou
+     * envoyée : le worker ne doit pas envoyer.
+     */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'SENDING', attemptStartedAt = :startedAt, " +
+            "attemptToken = NULL WHERE id = :id AND status = 'PENDING'",
+    )
+    suspend fun claim(id: Long, startedAt: Long): Int
+
+    @Query("UPDATE scheduled_messages SET attemptToken = :token WHERE id = :id")
+    suspend fun attachToken(id: Long, token: String)
+
+    /** Résolution par le verdict du message tenté : SENT ou FAILED (L3). */
+    @Query(
+        "UPDATE scheduled_messages SET status = :status " +
+            "WHERE attemptToken = :token AND status = 'SENDING'",
+    )
+    suspend fun resolveByToken(token: String, status: ScheduledStatus): Int
+
+    /** Annulation seulement tant que l'envoi n'a pas commencé (L3). */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'CANCELLED' " +
+            "WHERE id = :id AND status = 'PENDING'",
+    )
+    suspend fun cancelIfPending(id: Long): Int
+
+    /** Tentatives SENDING plus vieilles que le seuil : candidates à AMBIGUOUS. */
+    @Query(
+        "SELECT * FROM scheduled_messages WHERE status = 'SENDING' " +
+            "AND attemptStartedAt IS NOT NULL AND attemptStartedAt < :cutoff",
+    )
+    suspend fun getStaleSending(cutoff: Long): List<ScheduledMessage>
+
+    /** Réenfile une demande AMBIGUOUS pour un renvoi manuel confirmé (L3). */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'PENDING', scheduledAt = :at, " +
+            "attemptToken = NULL, attemptStartedAt = NULL " +
+            "WHERE id = :id AND status = 'AMBIGUOUS'",
+    )
+    suspend fun requeueAmbiguous(id: Long, at: Long): Int
+}
+
+@Dao
+interface MessagePartDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAll(parts: List<MessagePart>)
+
+    @Query("SELECT * FROM message_parts WHERE token = :token ORDER BY partIndex ASC")
+    suspend fun getByToken(token: String): List<MessagePart>
+
+    @Query(
+        "UPDATE message_parts SET sentState = :state, failureCode = :failureCode " +
+            "WHERE token = :token AND partIndex = :partIndex",
+    )
+    suspend fun updateSent(token: String, partIndex: Int, state: PartSentState, failureCode: Int?): Int
+
+    @Query("UPDATE message_parts SET delivered = 1 WHERE token = :token AND partIndex = :partIndex")
+    suspend fun updateDelivered(token: String, partIndex: Int): Int
 }
 
 @Dao
@@ -655,7 +758,7 @@ fun toFtsMatch(input: String): String {
 }
 
 /** Version courante du schéma (source unique, utilisée par @Database et les tests). */
-const val DATABASE_VERSION = 10
+const val DATABASE_VERSION = 11
 
 @Database(
     entities = [
@@ -675,6 +778,7 @@ const val DATABASE_VERSION = 10
         SimAssignment::class,
         PinnedThread::class,
         FavoriteContact::class,
+        MessagePart::class,
     ],
     version = DATABASE_VERSION,
     exportSchema = true,
@@ -696,6 +800,7 @@ abstract class TindaDatabase : RoomDatabase() {
     abstract fun simAssignmentDao(): SimAssignmentDao
     abstract fun pinnedThreadDao(): PinnedThreadDao
     abstract fun favoriteContactDao(): FavoriteContactDao
+    abstract fun messagePartDao(): MessagePartDao
 }
 
 /** Migration 3 -> 4 : colonne failureCode (diagnostic d'échec d'envoi). */
@@ -802,6 +907,29 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
     }
 }
 
+/** Migration 10 -> 11 (L3) : suivi des segments, tentatives d'envoi programmé, garde-fou transfert. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS message_parts (" +
+                "token TEXT NOT NULL, " +
+                "partIndex INTEGER NOT NULL, " +
+                "sentState TEXT NOT NULL, " +
+                "delivered INTEGER NOT NULL, " +
+                "failureCode INTEGER, " +
+                "PRIMARY KEY(token, partIndex))",
+        )
+        db.execSQL("ALTER TABLE scheduled_messages ADD COLUMN attemptToken TEXT")
+        db.execSQL("ALTER TABLE scheduled_messages ADD COLUMN attemptStartedAt INTEGER")
+        db.execSQL(
+            "ALTER TABLE forward_rules ADD COLUMN allowVerificationCodes INTEGER NOT NULL DEFAULT 0",
+        )
+        db.execSQL(
+            "ALTER TABLE forward_log ADD COLUMN heldVerificationCode INTEGER NOT NULL DEFAULT 0",
+        )
+    }
+}
+
 /**
  * Chaîne complète des migrations supportées (P0-5) : de la version 3
  * à la version courante, sans trou (continuité vérifiée par
@@ -813,5 +941,5 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-    MIGRATION_9_10,
+    MIGRATION_9_10, MIGRATION_10_11,
 )

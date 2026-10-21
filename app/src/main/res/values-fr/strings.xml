@@ -161,6 +161,11 @@
     <string name="scheduled_sent">envoyé</string>
     <string name="scheduled_cancelled">annulé</string>
     <string name="scheduled_failed">échec</string>
+    <string name="scheduled_sending">envoi en cours</string>
+    <string name="scheduled_ambiguous">état incertain</string>
+    <string name="scheduled_resend">Renvoyer ce message</string>
+    <string name="scheduled_resend_warning">Ce message a peut-être déjà été envoyé : son envoi a été interrompu avant le verdict de l\'opérateur. Le renvoyer peut créer un doublon chez le destinataire.</string>
+    <string name="scheduled_resend_confirm">Renvoyer quand même</string>
     <string name="settings_scheduled">SMS programmés</string>
     <string name="settings_scheduled_desc">Voir et annuler les envois différés</string>
     <string name="settings_autoreply">Répondeur automatique</string>
@@ -181,6 +186,8 @@
     <string name="forward_keyword">Mot-clé</string>
     <string name="forward_destination">Numéro destinataire</string>
     <string name="forward_include_content">Inclure le texte du message</string>
+    <string name="forward_allow_codes">Transférer les codes de vérification</string>
+    <string name="forward_allow_codes_hint">Désactivé par défaut : un message contenant un code de vérification détecté n\'est pas transféré et la suspension est journalisée. N\'activez que pour un destinataire de confiance.</string>
     <string name="forward_loop_warning">Sécurité : le transfert vers l\'expéditeur lui-même est interdit pour éviter les boucles.</string>
     <string name="forward_to">Vers %1$s</string>
     <string name="forward_source_number">N° %1$s</string>
