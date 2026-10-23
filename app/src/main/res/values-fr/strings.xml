@@ -68,7 +68,7 @@
     <string name="settings_mode_dark">Sombre</string>
     <string name="settings_dynamic_color">Couleurs dynamiques</string>
     <string name="settings_dynamic_color_phone">Couleurs du téléphone</string>
-    <string name="settings_dynamic_color_hint">Utilise les couleurs du fond d'écran et remplace la palette fixe choisie. Choisir un thème ci-dessus désactive ce mode.</string>
+    <string name="settings_dynamic_color_hint">Utilise les couleurs du fond d\'écran et remplace la palette fixe choisie. Choisir un thème ci-dessus désactive ce mode.</string>
     <string name="nav_messages">Messages</string>
     <string name="nav_automations">Automatisations</string>
     <string name="nav_settings">Réglages</string>

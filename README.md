@@ -87,7 +87,7 @@ sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
 
 1. **Recherche** : taper un mot dans la barre de recherche ; vérifier les
    résultats avec passages surlignés ; ouvrir un résultat (bon fil affiché).
-2. **Thèmes** : Paramètres → choisir chacun des 6 thèmes ; vérifier
+2. **Thèmes** : Paramètres → choisir chacun des sept thèmes ; vérifier
    l'aperçu instantané ; basculer clair/sombre/système.
 3. **Gestes** : balayer une conversation à droite (répondre par défaut) et à
    gauche (archiver par défaut) ; changer les actions dans Paramètres →
