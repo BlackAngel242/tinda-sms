@@ -11,7 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import tech.dmampro.tinda.data.local.ScheduledMessage
-import tech.dmampro.tinda.data.local.ScheduledStatus
 import tech.dmampro.tinda.data.local.TindaDatabase
 import tech.dmampro.tinda.util.SendJournal
 
@@ -79,9 +78,18 @@ class ScheduledSmsManager @Inject constructor(
     suspend fun sweepAmbiguous() {
         val cutoff = System.currentTimeMillis() - AMBIGUOUS_AFTER_MS
         for (item in db.scheduledMessageDao().getStaleSending(cutoff)) {
-            db.scheduledMessageDao().updateStatus(item.id, ScheduledStatus.AMBIGUOUS)
-            tech.dmampro.tinda.util.EventLog.log("scheduled.ambiguous")
-            SendJournal.log("programmé : état incertain (envoi interrompu sans verdict)")
+            // Transition conditionnelle atomique : si un accusé a résolu
+            // la tentative depuis la lecture, 0 ligne est touchée et le
+            // verdict SENT ou FAILED est conservé (jamais écrasé).
+            val transitioned = db.scheduledMessageDao().markAmbiguousIfStillSending(
+                id = item.id,
+                startedAt = item.attemptStartedAt,
+                token = item.attemptToken,
+            )
+            if (transitioned == 1) {
+                tech.dmampro.tinda.util.EventLog.log("scheduled.ambiguous")
+                SendJournal.log("programmé : état incertain (envoi interrompu sans verdict)")
+            }
         }
     }
 

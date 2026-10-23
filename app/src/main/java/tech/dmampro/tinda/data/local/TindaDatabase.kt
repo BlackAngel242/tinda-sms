@@ -335,6 +335,31 @@ interface MessageDao {
     @Query("UPDATE messages SET status = :status, failureCode = :failureCode WHERE token = :token")
     suspend fun updateStatusAndFailureByToken(token: String, status: MessageStatus, failureCode: Int?)
 
+    /**
+     * Écriture de statut d'accusé protégée contre les régressions :
+     * un statut terminal déjà persisté (DELIVERED ou FAILED) n'est
+     * jamais écrasé par un calcul concurrent plus ancien, sauf pour
+     * réécrire le même statut terminal (idempotence). Retourne le
+     * nombre de lignes réellement mises à jour.
+     */
+    @Query(
+        "UPDATE messages SET status = :status WHERE token = :token " +
+            "AND (status NOT IN ('DELIVERED', 'FAILED') OR status = :status)",
+    )
+    suspend fun updateStatusByTokenIfNotTerminal(token: String, status: MessageStatus): Int
+
+    /** Variante de [updateStatusByTokenIfNotTerminal] avec code d'échec. */
+    @Query(
+        "UPDATE messages SET status = :status, failureCode = :failureCode " +
+            "WHERE token = :token " +
+            "AND (status NOT IN ('DELIVERED', 'FAILED') OR status = :status)",
+    )
+    suspend fun updateStatusAndFailureByTokenIfNotTerminal(
+        token: String,
+        status: MessageStatus,
+        failureCode: Int?,
+    ): Int
+
     @Query("UPDATE messages SET providerId = :providerId WHERE id = :id")
     suspend fun updateProviderId(id: Long, providerId: Long)
 
@@ -480,12 +505,37 @@ interface ScheduledMessageDao {
     @Query("UPDATE scheduled_messages SET attemptToken = :token WHERE id = :id")
     suspend fun attachToken(id: Long, token: String)
 
-    /** Résolution par le verdict du message tenté : SENT ou FAILED (L3). */
+    /**
+     * Résolution par le verdict du message tenté : SENT ou FAILED (L3).
+     * Vaut pour une tentative encore SENDING et pour une tentative déjà
+     * balayée en AMBIGUOUS : un accusé tardif de la tentative d'origine
+     * résout l'état incertain, l'écran ne propose alors plus de renvoi.
+     * La condition sur le jeton suffit contre les tentatives remplacées :
+     * après réenfilage, attemptToken repasse à NULL puis reçoit un
+     * nouveau jeton, l'ancien ne correspond donc plus à aucune ligne.
+     */
     @Query(
         "UPDATE scheduled_messages SET status = :status " +
-            "WHERE attemptToken = :token AND status = 'SENDING'",
+            "WHERE attemptToken = :token AND status IN ('SENDING', 'AMBIGUOUS')",
     )
     suspend fun resolveByToken(token: String, status: ScheduledStatus): Int
+
+    /**
+     * Passage en AMBIGUOUS atomique et conditionnel : ne transitionne
+     * (1 ligne) que si la ligne est toujours la tentative relue par le
+     * balayage (même id, même début, même jeton, encore SENDING). Si un
+     * accusé a entre-temps résolu la ligne en SENT ou FAILED, la mise à
+     * jour touche 0 ligne et ne peut pas écraser ce verdict.
+     */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'AMBIGUOUS' " +
+            "WHERE id = :id AND status = 'SENDING' " +
+            "AND (attemptStartedAt = :startedAt " +
+            "OR (attemptStartedAt IS NULL AND :startedAt IS NULL)) " +
+            "AND (attemptToken = :token " +
+            "OR (attemptToken IS NULL AND :token IS NULL))",
+    )
+    suspend fun markAmbiguousIfStillSending(id: Long, startedAt: Long?, token: String?): Int
 
     /** Annulation seulement tant que l'envoi n'a pas commencé (L3). */
     @Query(
