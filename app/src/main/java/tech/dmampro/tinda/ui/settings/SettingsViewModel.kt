@@ -99,6 +99,10 @@ class SettingsViewModel @Inject constructor(
     fun setTheme(id: String) {
         viewModelScope.launch {
             prefs.setAppThemeId(id)
+            // Lot 1 : choisir une palette fixe désactive explicitement
+            // Material You, sinon la palette ne s'appliquerait pas.
+            // L'identifiant du thème reste mémorisé pour y revenir.
+            prefs.setDynamicColor(false)
             EventLog.log("theme.set", id)
         }
     }

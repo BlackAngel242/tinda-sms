@@ -20,6 +20,11 @@ val TindaNeutral99 = Color(0xFFFBFDFC)
 
 val TindaError40 = Color(0xFFBA1A1A)
 val TindaError80 = Color(0xFFFFB4AB)
+val TindaErrorContainerLight = Color(0xFFF9DEDC)
+val TindaOnErrorContainerLight = Color(0xFF410E0B)
+val TindaOnErrorDark = Color(0xFF601410)
+val TindaErrorContainerDark = Color(0xFF8C1D18)
+val TindaOnErrorContainerDark = Color(0xFFF9DEDC)
 
 // Palettes originales du moteur de thèmes V1 (lot 2, F4).
 // Chaque thème est une création propre : aucune couleur reprise d'une autre app.
@@ -100,3 +105,20 @@ val RadiantTextTertiary = Color(0xFF64748B)
 val RadiantSky = Color(0xFF38BDF8)
 val RadiantSim1 = Color(0xFFF44444)
 val RadiantSim2 = Color(0xFFF59E0B)
+
+// Radiant, mode clair (lot 1) : fond ardoise très léger, texte foncé,
+// accent assombri pour garder un contraste suffisant sur fond clair.
+val RadiantPrimaryLight = Color(0xFF00836F)
+val RadiantSkyLight = Color(0xFF0369A1)
+val RadiantBgLight = Color(0xFFF3F5F7)
+val RadiantSurfaceLightLowest = Color(0xFFFFFFFF)
+val RadiantSurfaceLightLow = Color(0xFFEDF1F5)
+val RadiantSurfaceLight = Color(0xFFE2E8F0)
+val RadiantSurfaceLightHigh = Color(0xFFCBD5E1)
+val RadiantOnVariantLight = Color(0xFF475569)
+val RadiantPrimaryContainerLight = Color(0xFFA7E8D8)
+val RadiantSecondaryContainerLight = Color(0xFFD3EDFB)
+val RadiantOnSecondaryContainerLight = Color(0xFF0C3547)
+val RadiantSecondaryContainerDark = Color(0xFF0E3A4A)
+val RadiantOnSecondaryDark = Color(0xFF082F3F)
+val RadiantOnSecondaryContainerDark = Color(0xFFC8EFFF)

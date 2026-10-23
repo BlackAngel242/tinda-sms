@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
             // Thème choisi dans les paramètres (F4) : aperçu instantané.
             val themeId by prefs.appThemeId.collectAsState(initial = DEFAULT_THEME_ID)
             val modeId by prefs.themeMode.collectAsState(initial = ThemeMode.SYSTEM.id)
-            val dynamic by prefs.dynamicColor.collectAsState(initial = true)
+            val dynamic by prefs.dynamicColor.collectAsState(initial = false)
             val dark = when (ThemeMode.byId(modeId)) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
