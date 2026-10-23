@@ -1,5 +1,6 @@
 package tech.dmampro.tinda.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -57,11 +58,22 @@ fun TindaNavGraph(
     // Choix le moins risqué : un Scaffold extérieur porte la barre et
     // transmet son innerPadding au NavHost ; les écrans gardent leurs
     // propres Scaffold et FAB, qui restent au dessus de la barre.
+    // Revue Codex PR nº 4 : ce Scaffold extérieur n'applique AUCUN
+    // inset système (contentWindowInsets à zéro). Son innerPadding ne
+    // contient que la hauteur de la barre basse : Modifier.padding ne
+    // consomme pas les insets, et les Scaffold internes les
+    // réappliquaient (double marge haute et basse, espace en trop au
+    // dessus du clavier). Chaque écran interne redevient seul
+    // responsable de ses insets système, comme avant le lot 1. La
+    // NavigationBar gère elle-même l'inset de la barre de navigation
+    // système (windowInsets par défaut de Material 3), donc la barre
+    // basse reste placée au dessus de la zone système.
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val mainRoutes = setOf(Routes.CONVERSATIONS, Routes.AUTOMATIONS, Routes.SETTINGS)
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         bottomBar = {
             if (currentRoute in mainRoutes) {
                 TindaBottomBar(
