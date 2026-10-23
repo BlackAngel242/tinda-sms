@@ -37,11 +37,11 @@ data class PartOutcome(
  *
  * - `-1` (Activity.RESULT_OK) : confirmé.
  * - `0` (Activity.RESULT_CANCELED) : observé sur le terrain le
- *   18 octobre 2026 sur un Redmi Note 14 (HyperOS, fabricant Xiaomi)
- *   pour des envois réellement partis : il y vaut confirmation.
- *   Partout ailleurs, ce code ne prouve ni succès ni échec : le
- *   segment reste non confirmé. Les autres ROM (Tecno, Infinix,
- *   Itel...) ne sont pas prouvées (hypothèse HYP-03 du PRD).
+ *   18 octobre 2026 pour des envois réellement partis, sur deux
+ *   appareils prouvés : Redmi Note 14 (HyperOS, fabricant Xiaomi)
+ *   et Tecno sous HiOS. Sur ces seules ROM (voir RomPolicy), il vaut
+ *   confirmation. Partout ailleurs, ce code ne prouve ni succès ni
+ *   échec : le segment reste non confirmé (hypothèse HYP-03 du PRD).
  * - tout autre code : échec documenté, conservé pour le diagnostic.
  *   La documentation Android expose des erreurs au-delà de 1 à 4 ;
  *   aucun code inconnu n'est ignoré.

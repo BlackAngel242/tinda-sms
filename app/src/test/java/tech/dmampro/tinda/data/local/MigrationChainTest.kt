@@ -8,9 +8,15 @@ import org.junit.Test
  * Chaîne de migrations de la base principale (P0-5) : le retrait du
  * repli destructif n'est sûr que si chaque version supportée mène à la
  * suivante sans trou, jusqu'à la version déclarée par @Database.
- * Les migrations elles-mêmes (SQL) seront couvertes par des tests
- * instrumentés MigrationTestHelper quand l'artefact room-testing sera
- * disponible dans l'environnement ; ils ne sont pas exécutables ici.
+ * Le SQL émis par chaque migration est exécuté et contrôlé en JVM par
+ * MigrationExecutionTest. En revanche, aucune migration n'a été
+ * exécutée contre une vraie base SQLite ici : MigrationTestHelper
+ * demande androidx.room:room-testing et androidx.test, absents du
+ * cache Gradle hors ligne (recherche faite le 23 octobre 2026), les
+ * schémas exportés ne couvrent que les versions 10 et 11, et aucun
+ * appareil ni émulateur n'est disponible. La conservation réelle des
+ * données par les migrations reste donc non exécutée dans cet
+ * environnement, voir docs/validation/revue-codex-pr2-correctifs.md.
  */
 class MigrationChainTest {
 

@@ -1,6 +1,5 @@
 package tech.dmampro.tinda.sms
 
-import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -26,9 +25,11 @@ import tech.dmampro.tinda.util.TindaLogger
  * [resultCode] est capturé pendant [onReceive], avant tout traitement
  * asynchrone : sa valeur n'est garantie qu'à cet instant.
  *
- * Sur son Redmi Note 14 (HyperOS), le système renvoie 0 alors que le
- * SMS est réellement parti (prouvé le 18 octobre 2026) ; ailleurs, 0
- * reste non concluant. Voir [sentVerdictForResultCode].
+ * Sur les deux appareils prouvés le 18 octobre 2026 (Redmi Note 14
+ * sous HyperOS et Tecno sous HiOS), le système renvoie 0 alors que le
+ * SMS est réellement parti ; partout ailleurs, 0 reste non concluant,
+ * pour l'émission comme pour la livraison. Voir [RomPolicy] et
+ * [sentVerdictForResultCode].
  */
 class SmsStatusReceiver : BroadcastReceiver() {
 
@@ -51,11 +52,18 @@ class SmsStatusReceiver : BroadcastReceiver() {
                     context.applicationContext,
                     ReceiverEntryPoint::class.java,
                 ).smsRepository()
+                val zeroProven = isZeroResultCodeProvenRom(
+                    manufacturer = Build.MANUFACTURER,
+                    brand = Build.BRAND,
+                    model = Build.MODEL,
+                    display = Build.DISPLAY,
+                    versionIncremental = Build.VERSION.INCREMENTAL,
+                )
                 when (intent.action) {
                     SmsSender.ACTION_SMS_SENT -> {
                         val (state, failureCode) = sentVerdictForResultCode(
                             rc,
-                            zeroMeansSentOnThisRom = isZeroSuccessRom(),
+                            zeroMeansSentOnThisRom = zeroProven,
                         )
                         repository.recordPartSent(token, partIndex, state, failureCode)
                         SendJournal.log(
@@ -63,14 +71,17 @@ class SmsStatusReceiver : BroadcastReceiver() {
                         )
                     }
                     SmsSender.ACTION_SMS_DELIVERED -> {
-                        if (rc == Activity.RESULT_OK || rc == Activity.RESULT_CANCELED) {
+                        // Même politique que l'émission : le code 0 ne
+                        // vaut livraison que sur une ROM prouvée.
+                        if (isDeliveryConfirmed(rc, zeroProven)) {
                             repository.recordPartDelivered(token, partIndex)
                             SendJournal.log(
                                 "accusé livraison segment $partIndex (resultCode=$rc)",
                             )
                         } else {
                             SendJournal.log(
-                                "accusé livraison segment $partIndex : code $rc ignoré",
+                                "accusé livraison segment $partIndex : " +
+                                    "code $rc non confirmé, livraison non enregistrée",
                             )
                         }
                     }
@@ -82,14 +93,6 @@ class SmsStatusReceiver : BroadcastReceiver() {
             }
         }
     }
-
-    /**
-     * ROM où le code 0 accompagnant un envoi réel est prouvé par le
-     * terrain : fabricant Xiaomi (Redmi Note 14, HyperOS). Toute autre
-     * ROM est non prouvée : 0 y reste non concluant.
-     */
-    private fun isZeroSuccessRom(): Boolean =
-        Build.MANUFACTURER.contains("Xiaomi", ignoreCase = true)
 
     private companion object {
         const val TAG = "SmsStatusReceiver"
