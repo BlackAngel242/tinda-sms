@@ -1,0 +1,6 @@
+export type PrivacyRule = {id:number;name:string;contactId:number|null;keyword:string;when:'À la réception'|'Après lecture';action:'Coffre'|'Supprimer';delay:number;phrase:string;enabled:boolean};
+export type DeliveryState = 'En attente'|'Envoyé'|'Livraison confirmée'|'Échec'|'Livraison non confirmée'|'Partiel';
+export function matches(rule:PrivacyRule,contactId:number,text:string){return rule.enabled&&(rule.contactId===null||rule.contactId===contactId)&&(!rule.keyword||text.toLocaleLowerCase('fr').includes(rule.keyword.toLocaleLowerCase('fr')));}
+export function recipients(ids:number[],excluded:number[],privateIds:number[]=[]){const denied=new Set([...excluded,...privateIds]);return [...new Set(ids)].filter(id=>!denied.has(id));}
+export function personalize(template:string,variables:Record<string,string>){let missing:string[]=[];const text=template.replace(/\{([a-zA-Z_]+)\}/g,(_,key)=>{if(!variables[key]?.trim()){missing.push(key);return `{${key}}`;}return variables[key];});return {text,missing:[...new Set(missing)]};}
+export function deliverySummary(rows:{status:DeliveryState}[]){return rows.reduce<Record<string,number>>((total,row)=>({...total,[row.status]:(total[row.status]||0)+1}),{});}

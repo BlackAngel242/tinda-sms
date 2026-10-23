@@ -92,3 +92,7 @@ sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
    vérifier la disparition du fil.
 7. **Langue** : passer l'interface en anglais puis revenir au français
    (Android 13+ ; en dessous, suit le système).
+
+## Nouvelle référence d’interface
+
+La [maquette interactive et ses sources](design/README.md) sont disponibles pour préparer le portage Compose. Le [guide d’intégration](docs/design/INTEGRATION-ANDROID.md) relie chaque parcours au code existant ; la [note sur les thèmes](docs/design/THEMES.md) précise les corrections avant validation Android. Ces fichiers ne modifient pas le comportement de l’APK.
