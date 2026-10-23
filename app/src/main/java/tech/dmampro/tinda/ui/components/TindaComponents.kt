@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -75,7 +77,11 @@ fun TindaAvatar(
     }
 }
 
-/** Badge SIM neutre : fond surfaceVariant, libellé explicite (ex. « SIM 1 »). */
+/**
+ * Badge SIM neutre : fond surfaceVariant, libellé explicite (ex.
+ * « SIM 1 »). Le libellé est aussi la description d'accessibilité du
+ * badge (sémantique fusionnée) : TalkBack lit « SIM 1 », pas la couleur.
+ */
 @Composable
 fun SimBadge(
     label: String,
@@ -85,7 +91,8 @@ fun SimBadge(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(horizontal = 6.dp, vertical = 2.dp),
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .semantics(mergeDescendants = true) { contentDescription = label },
     ) {
         Text(
             label,

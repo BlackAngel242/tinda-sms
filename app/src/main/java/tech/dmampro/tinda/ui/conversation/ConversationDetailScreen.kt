@@ -84,6 +84,9 @@ import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.ui.components.MessageSim
+import tech.dmampro.tinda.ui.components.SimBadge
+import tech.dmampro.tinda.ui.components.messageSimFor
 import tech.dmampro.tinda.ui.schedule.ScheduleDialog
 import tech.dmampro.tinda.util.OtpDetection
 import tech.dmampro.tinda.util.SmsEncoding
@@ -91,9 +94,10 @@ import tech.dmampro.tinda.util.TimeFormat
 
 /**
  * Fil de discussion, couleurs du thème (lot 1) :
- * canvas ardoise profonde, bulles sortantes en dégradé teal, bordure
- * colorée selon la SIM d'envoi, carte OTP dédiée, modèles rapides,
- * sélecteur SIM et indicateur d'encodage dans le compositeur.
+ * canvas ardoise profonde, bulles sortantes en dégradé teal, libellé
+ * de la SIM historique dans le pied de chaque bulle sortante, carte
+ * OTP dédiée, modèles rapides, sélecteur SIM et indicateur
+ * d'encodage dans le compositeur.
  * La logique d'envoi (SmsSender) et les ViewModels sont inchangés.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -226,8 +230,13 @@ fun ConversationDetailScreen(
                         } else {
                             MessageBubble(
                                 message = message,
-                                showSimMark = !message.incoming &&
-                                    (slotBySubId[message.subscriptionId] ?: -1) in 0..1,
+                                // SIM historique du message (subscriptionId
+                                // persisté), pas celle du compositeur.
+                                messageSim = if (message.incoming) {
+                                    null
+                                } else {
+                                    messageSimFor(message.subscriptionId, slotBySubId)
+                                },
                                 onFailedClick = { failedMessage = it },
                             )
                         }
@@ -276,7 +285,7 @@ private fun DatePill(label: String) {
 @Composable
 private fun MessageBubble(
     message: Message,
-    showSimMark: Boolean,
+    messageSim: MessageSim?,
     onFailedClick: (Message) -> Unit,
 ) {
     val isIncoming = message.incoming
@@ -333,22 +342,6 @@ private fun MessageBubble(
                 color = if (isIncoming) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             )
-            // Fine bordure neutre si le message part d'une SIM connue
-            // (côté droit) : la SIM est nommée dans le compositeur et
-            // l'en-tête, la couleur seule ne porte pas l'information.
-            if (showSimMark) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(x = 1.dp)
-                        .width(3.dp)
-                        .fillMaxHeight(0.65f)
-                        .background(
-                            MaterialTheme.colorScheme.outlineVariant,
-                            RoundedCornerShape(50),
-                        ),
-                )
-            }
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -362,6 +355,18 @@ private fun MessageBubble(
             )
             if (!isIncoming) {
                 StatusIcon(status = message.status)
+            }
+            // SIM historique de CE message, en texte neutre : « SIM 1 »,
+            // « SIM 2 », ou « SIM inconnue » si la SIM a été retirée ou
+            // n'a pas été persistée. Jamais la SIM du compositeur.
+            if (messageSim != null) {
+                SimBadge(
+                    label = when (messageSim) {
+                        is MessageSim.Known ->
+                            stringResource(R.string.sim_chip_label, messageSim.slotNumber)
+                        MessageSim.Unknown -> stringResource(R.string.sim_unknown_label)
+                    },
+                )
             }
         }
     }

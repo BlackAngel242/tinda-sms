@@ -250,6 +250,7 @@
     <string name="day_today">Today</string>
     <string name="filter_all">All</string>
     <string name="sim_chip_label">SIM %1$d</string>
+    <string name="sim_unknown_label">Unknown SIM</string>
     <string name="copy_code">Copy</string>
     <string name="otp_badge">CODE 2FA</string>
     <string name="recent_messages">RECENT MESSAGES</string>
