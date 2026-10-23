@@ -84,23 +84,13 @@ import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
-import tech.dmampro.tinda.theme.RadiantBg
-import tech.dmampro.tinda.theme.RadiantPrimary
-import tech.dmampro.tinda.theme.RadiantPrimaryDeep
-import tech.dmampro.tinda.theme.RadiantSim1
-import tech.dmampro.tinda.theme.RadiantSim2
-import tech.dmampro.tinda.theme.RadiantSurface
-import tech.dmampro.tinda.theme.RadiantSurfaceHigh
-import tech.dmampro.tinda.theme.RadiantText
-import tech.dmampro.tinda.theme.RadiantTextSecondary
-import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.ui.schedule.ScheduleDialog
 import tech.dmampro.tinda.util.OtpDetection
 import tech.dmampro.tinda.util.SmsEncoding
 import tech.dmampro.tinda.util.TimeFormat
 
 /**
- * Fil de discussion, style "Radiant Slate" (design Stitch, oct. 2026) :
+ * Fil de discussion, couleurs du thème (lot 1) :
  * canvas ardoise profonde, bulles sortantes en dégradé teal, bordure
  * colorée selon la SIM d'envoi, carte OTP dédiée, modèles rapides,
  * sélecteur SIM et indicateur d'encodage dans le compositeur.
@@ -142,7 +132,7 @@ fun ConversationDetailScreen(
     val selectedSlot = (slotBySubId[uiState.selectedSimId] ?: 0) + 1
 
     Scaffold(
-        containerColor = RadiantBg,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -150,14 +140,14 @@ fun ConversationDetailScreen(
                         Text(
                             uiState.displayName,
                             style = MaterialTheme.typography.titleMedium,
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                         )
                         if (selectedSim != null) {
                             Text(
                                 selectedSim.displayName,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = RadiantTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
@@ -167,7 +157,7 @@ fun ConversationDetailScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
-                            tint = RadiantText,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
@@ -176,7 +166,7 @@ fun ConversationDetailScreen(
                         Icon(
                             if (uiState.isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
                             contentDescription = stringResource(R.string.favorite_toggle),
-                            tint = if (uiState.isFavorite) RadiantPrimary else RadiantTextSecondary,
+                            tint = if (uiState.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     IconButton(
@@ -186,11 +176,11 @@ fun ConversationDetailScreen(
                         Icon(
                             Icons.Filled.Schedule,
                             contentDescription = stringResource(R.string.schedule_title),
-                            tint = RadiantPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = RadiantBg),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
         bottomBar = {
@@ -236,11 +226,8 @@ fun ConversationDetailScreen(
                         } else {
                             MessageBubble(
                                 message = message,
-                                simColor = if (!message.incoming) {
-                                    simColorFor(slotBySubId[message.subscriptionId])
-                                } else {
-                                    null
-                                },
+                                showSimMark = !message.incoming &&
+                                    (slotBySubId[message.subscriptionId] ?: -1) in 0..1,
                                 onFailedClick = { failedMessage = it },
                             )
                         }
@@ -278,25 +265,18 @@ private fun DatePill(label: String) {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = RadiantTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
-                .background(RadiantSurface, RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(50))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
         )
     }
 }
 
-/** Couleur de bordure selon la SIM d'envoi (rouge SIM 1, ambre SIM 2). */
-private fun simColorFor(slotIndex: Int?): Color? = when (slotIndex) {
-    0 -> RadiantSim1
-    1 -> RadiantSim2
-    else -> null
-}
-
 @Composable
 private fun MessageBubble(
     message: Message,
-    simColor: Color?,
+    showSimMark: Boolean,
     onFailedClick: (Message) -> Unit,
 ) {
     val isIncoming = message.incoming
@@ -306,9 +286,9 @@ private fun MessageBubble(
         bottomStart = if (isIncoming) 4.dp else 20.dp,
         bottomEnd = if (isIncoming) 20.dp else 4.dp,
     )
-    // Dégradé 135 degrés (haut-gauche vers bas-droite) pour les sortants.
+    // Aplat de l'accent du thème pour les sortants (un seul accent, lot 1).
     val outgoingBrush = Brush.linearGradient(
-        colors = listOf(RadiantPrimary, RadiantPrimaryDeep),
+        colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary),
         start = Offset.Zero,
         end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY),
     )
@@ -327,14 +307,14 @@ private fun MessageBubble(
                         Modifier.shadow(
                             elevation = 6.dp,
                             shape = bubbleShape,
-                            ambientColor = RadiantPrimary.copy(alpha = 0.22f),
-                            spotColor = RadiantPrimary.copy(alpha = 0.22f),
+                            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
+                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f),
                         )
                     },
                 )
                 .then(
                     if (isIncoming) {
-                        Modifier.background(RadiantSurface, bubbleShape)
+                        Modifier.background(MaterialTheme.colorScheme.surfaceContainer, bubbleShape)
                     } else {
                         Modifier.background(outgoingBrush, bubbleShape)
                     },
@@ -350,18 +330,23 @@ private fun MessageBubble(
             Text(
                 message.body,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (isIncoming) RadiantText else RadiantBg,
+                color = if (isIncoming) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             )
-            // Fine bordure colorée selon la SIM d'envoi (côté droit).
-            if (simColor != null) {
+            // Fine bordure neutre si le message part d'une SIM connue
+            // (côté droit) : la SIM est nommée dans le compositeur et
+            // l'en-tête, la couleur seule ne porte pas l'information.
+            if (showSimMark) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
                         .offset(x = 1.dp)
                         .width(3.dp)
                         .fillMaxHeight(0.65f)
-                        .background(simColor, RoundedCornerShape(50)),
+                        .background(
+                            MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(50),
+                        ),
                 )
             }
         }
@@ -373,7 +358,7 @@ private fun MessageBubble(
             Text(
                 TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
                 style = MaterialTheme.typography.labelSmall,
-                color = RadiantTextTertiary,
+                color = MaterialTheme.colorScheme.outline,
             )
             if (!isIncoming) {
                 StatusIcon(status = message.status)
@@ -397,7 +382,7 @@ private fun OtpCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.88f)
-                .background(RadiantSurface, cardShape),
+                .background(MaterialTheme.colorScheme.surfaceContainer, cardShape),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -407,22 +392,22 @@ private fun OtpCard(
                     Icon(
                         Icons.Filled.Shield,
                         contentDescription = null,
-                        tint = RadiantPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
                         stringResource(R.string.otp_card_title),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = RadiantPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                     )
                     Text(
                         "2FA",
                         style = MaterialTheme.typography.labelSmall,
-                        color = RadiantTextTertiary,
+                        color = MaterialTheme.colorScheme.outline,
                         modifier = Modifier
-                            .background(RadiantBg, RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.background, RoundedCornerShape(50))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
@@ -432,7 +417,7 @@ private fun OtpCard(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(RadiantBg, RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.background, RoundedCornerShape(16.dp))
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     Text(
@@ -441,14 +426,14 @@ private fun OtpCard(
                         fontWeight = FontWeight.Bold,
                         fontSize = 24.sp,
                         letterSpacing = 2.sp,
-                        color = RadiantPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.weight(1f),
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .background(RadiantPrimary, RoundedCornerShape(50))
+                            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
                             .clickable {
                                 copyToClipboard(context, code)
                                 Toast.makeText(
@@ -462,14 +447,14 @@ private fun OtpCard(
                         Icon(
                             Icons.Filled.ContentCopy,
                             contentDescription = null,
-                            tint = RadiantBg,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
                             stringResource(R.string.otp_copy),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = RadiantBg,
+                            color = MaterialTheme.colorScheme.onPrimary,
                         )
                     }
                 }
@@ -477,7 +462,7 @@ private fun OtpCard(
                 Text(
                     message.body,
                     style = MaterialTheme.typography.bodySmall,
-                    color = RadiantTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 val expiryMinutes = remember(message.body) {
                     OtpDetection.detectExpiryMinutes(message.body)
@@ -487,24 +472,27 @@ private fun OtpCard(
                     Text(
                         stringResource(R.string.otp_expires_in, expiryMinutes),
                         style = MaterialTheme.typography.labelSmall,
-                        color = RadiantPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
-            // Accent rouge sur le bord droit, comme la maquette.
+            // Accent neutre sur le bord droit.
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .offset(x = 1.dp)
                     .width(3.dp)
                     .fillMaxHeight(0.8f)
-                    .background(RadiantSim1, RoundedCornerShape(50)),
+                    .background(
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(50),
+                    ),
             )
         }
         Text(
             TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
             style = MaterialTheme.typography.labelSmall,
-            color = RadiantTextTertiary,
+            color = MaterialTheme.colorScheme.outline,
             modifier = Modifier.padding(top = 2.dp, start = 4.dp),
         )
     }
@@ -583,15 +571,15 @@ private fun Composer(
                 onValueChange = onDraftChange,
                 modifier = Modifier.weight(1f),
                 maxLines = 4,
-                textStyle = MaterialTheme.typography.bodyMedium.copy(color = RadiantText),
-                cursorBrush = SolidColor(RadiantPrimary),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
-                            .background(RadiantSurface, RoundedCornerShape(28.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(28.dp))
                             .border(
                                 1.dp,
-                                Color.White.copy(alpha = 0.08f),
+                                MaterialTheme.colorScheme.outlineVariant,
                                 RoundedCornerShape(28.dp),
                             )
                             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -600,7 +588,7 @@ private fun Composer(
                             Text(
                                 stringResource(R.string.composer_hint_sim, selectedSlot),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = RadiantTextTertiary,
+                                color = MaterialTheme.colorScheme.outline,
                             )
                         }
                         innerTextField()
@@ -611,7 +599,7 @@ private fun Composer(
                 modifier = Modifier
                     .size(42.dp)
                     .background(
-                        if (canSend) RadiantPrimary else RadiantSurfaceHigh,
+                        if (canSend) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh,
                         CircleShape,
                     )
                     // Appui court = envoi immédiat, appui long = programmer.
@@ -628,7 +616,8 @@ private fun Composer(
                 Icon(
                     Icons.AutoMirrored.Filled.Send,
                     contentDescription = stringResource(R.string.send),
-                    tint = RadiantBg,
+                    tint = if (canSend) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -652,14 +641,14 @@ private fun QuickTemplatesRow(onInsert: (String) -> Unit) {
         items(templates) { template ->
             Box(
                 modifier = Modifier
-                    .background(RadiantSurfaceHigh, RoundedCornerShape(50))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(50))
                     .clickable { onInsert(template) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Text(
                     template,
                     style = MaterialTheme.typography.labelMedium,
-                    color = RadiantText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                 )
             }
@@ -677,22 +666,21 @@ private fun SimPills(
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         sims.forEach { sim ->
             val selected = sim.subscriptionId == selectedSimId
-            val dotColor = when (sim.slotIndex) {
-                0 -> RadiantSim1
-                1 -> RadiantSim2
-                else -> RadiantPrimary
-            }
+            // Pastille neutre : le libellé « 1 Nom » / « 2 Nom » porte
+            // l'information, pas une couleur par SIM.
+            val dotColor = MaterialTheme.colorScheme.onSurfaceVariant
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier
                     .background(
-                        if (selected) RadiantSurfaceHigh else Color.Transparent,
+                        if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
                         RoundedCornerShape(50),
                     )
                     .border(
                         1.dp,
-                        if (selected) dotColor else Color.White.copy(alpha = 0.12f),
+                        if (selected) dotColor
+                        else MaterialTheme.colorScheme.outlineVariant,
                         RoundedCornerShape(50),
                     )
                     .clickable { onSelect(sim.subscriptionId) }
@@ -706,7 +694,7 @@ private fun SimPills(
                 Text(
                     "${sim.slotIndex + 1} ${sim.displayName}",
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) RadiantText else RadiantTextSecondary,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -733,9 +721,9 @@ private fun EncodingIndicator(
             segmentInfo.parts,
         ),
         style = MaterialTheme.typography.labelSmall,
-        color = RadiantTextTertiary,
+        color = MaterialTheme.colorScheme.outline,
         modifier = Modifier
-            .background(RadiantSurface, RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(50))
             .padding(horizontal = 10.dp, vertical = 6.dp),
     )
 }
@@ -847,17 +835,17 @@ private fun StatusIcon(status: MessageStatus) {
     val (icon, tint, description) = when (status) {
         MessageStatus.SENDING -> Triple(
             Icons.Filled.Schedule,
-            RadiantTextTertiary,
+            MaterialTheme.colorScheme.outline,
             R.string.status_sending,
         )
         MessageStatus.SENT -> Triple(
             Icons.Filled.Check,
-            RadiantTextTertiary,
+            MaterialTheme.colorScheme.outline,
             R.string.status_sent,
         )
         MessageStatus.DELIVERED -> Triple(
             Icons.Filled.DoneAll,
-            RadiantPrimary,
+            MaterialTheme.colorScheme.primary,
             R.string.status_delivered,
         )
         MessageStatus.FAILED -> Triple(
