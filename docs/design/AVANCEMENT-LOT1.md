@@ -164,3 +164,99 @@ Gradle 8.14.3 local, `--offline`, voir `docs/validation/fiche-build-l0.md`) :
   confidentialité, finition) : non commencés, conformément à la
   consigne de terminer et vérifier le lot 1 avant la suite.
 - Aucune installation sur téléphone, aucune fusion, aucune release.
+
+## Correctifs revue Codex PR nº 4
+
+Date : 23 octobre 2026. Branche `codex_lot1-design-system-themes`,
+après fusion de `claude/reprise` corrigée (correctifs PR nº 2) et de
+`master` (PR nº 3 fusionnée, documentation non dupliquée).
+Baseline de la branche fusionnée avant ces correctifs : 116 tests
+unitaires, assembleDebug OK, lintDebug non exécutable (voir plus bas).
+
+### Problème 1 : SIM historique invisible dans les bulles
+
+Le lot 1 avait remplacé la couleur par SIM par une bordure neutre
+identique pour les deux SIM, sans libellé par message : dans un fil
+qui alterne SIM 1 et SIM 2, on ne savait plus de quelle SIM chaque
+message était parti. Seuls l'en-tête et le compositeur nomment une
+SIM, et c'est celle du prochain envoi, pas celle des anciens
+messages (commit de correction : `8c71040`).
+
+Changements :
+
+- `ui/components/MessageSim.kt` (nouveau) : type scellé `MessageSim`
+  (`Known(slotNumber)` ou `Unknown`) et fonction pure
+  `messageSimFor(subscriptionId, slotBySubscriptionId)`. Source :
+  le `subscriptionId` persisté de chaque message. `-1` ou
+  identifiant absent des SIM actuelles (SIM retirée ou remplacée)
+  donne `Unknown`, sans numéro d'emplacement inventé.
+- `ui/conversation/ConversationDetailScreen.kt` : `MessageBubble`
+  reçoit `messageSim` (null pour les entrants) au lieu de
+  `showSimMark` ; le pied de bulle (heure, statut) affiche un
+  `SimBadge` textuel : « SIM 1 », « SIM 2 » ou « SIM inconnue »
+  (chaîne `sim_unknown_label`, FR et EN). Le libellé inconnu est
+  visible comme les autres, jamais masqué. La bordure latérale
+  neutre est retirée : le texte porte seul l'information, la garder
+  aurait été un signal redondant sans valeur. L'en-tête et le
+  compositeur gardent la SIM sélectionnée pour le prochain envoi,
+  c'est leur rôle.
+- `ui/components/TindaComponents.kt` : `SimBadge` expose son
+  libellé comme description d'accessibilité (sémantique fusionnée) :
+  TalkBack lit « SIM 1 », pas une couleur.
+- Vérifié par grep : aucun autre écran ne présente la SIM du
+  compositeur comme celle d'anciens messages. La liste des
+  conversations dérive son badge du `subscriptionId` enregistré du
+  fil, pas du compositeur.
+
+### Problème 2 : doubles insets du Scaffold extérieur
+
+Le Scaffold extérieur de la navigation appliquait les insets
+système et les transmettait au NavHost via `Modifier.padding`, qui
+ne les consomme pas : les Scaffold internes les réappliquaient.
+Double marge haute et basse, et espace en trop au dessus du clavier
+dans le détail (commit de correction : `28cf331`).
+
+Changements :
+
+- `navigation/TindaNavGraph.kt` : `contentWindowInsets =
+  WindowInsets(0, 0, 0, 0)` sur le Scaffold extérieur. Son
+  innerPadding ne contient plus que la hauteur de la barre basse,
+  présente seulement sur les trois destinations principales. La
+  `NavigationBar` (Material 3) gère elle-même l'inset bas des barres
+  système, la barre basse reste donc placée au dessus de la zone
+  système.
+- Écrans internes revus un par un : liste des conversations,
+  Réglages et Automatisations appliquent leurs insets via leur
+  propre Scaffold et son `innerPadding`, une seule fois. Dans le
+  détail, le compositeur conserve `navigationBarsPadding()` et
+  `imePadding()` : c'est désormais la seule application, le champ
+  de rédaction reste au dessus du clavier (comportement d'avant le
+  lot 1, validé sur le terrain, commit historique `a4951cf`).
+
+### Vérifié
+
+- `testDebugUnitTest` (équivalent local documenté, JDK 21, Gradle
+  8.14.3, `--offline`) : BUILD SUCCESSFUL. 121 tests, 0 échec,
+  0 erreur, 0 ignoré (comptes lus dans les rapports XML). Base
+  fusionnée : 116 ; nouveau : `MessageSimTest`, 5 cas (emplacement
+  0 donne SIM 1, emplacement 1 donne SIM 2, identifiant absent
+  donne inconnue, -1 donne inconnue, aucune SIM actuelle donne
+  inconnue).
+- `assembleDebug` : BUILD SUCCESSFUL, APK debug régénéré
+  (15 926 641 octets), non installé.
+- `lintDebug` : non exécutable dans cet environnement, avant comme
+  après ces correctifs : `com.android.tools.lint:lint-gradle:
+  31.10.1` absent du cache hors ligne. Constat d'environnement, pas
+  un échec du code.
+
+### Non vérifié
+
+- Validation visuelle sur appareil : NON faite, aucune capture
+  Android réelle (ni appareil ni émulateur dans cet environnement).
+  Restent à contrôler sur téléphone : le libellé SIM dans les
+  bulles en usage réel et sa lecture TalkBack, le champ de
+  rédaction et le clavier dans le détail, l'absence de doubles
+  marges sur les trois destinations, l'espace entre le contenu
+  (et le FAB de la liste) et la barre basse, la police agrandie.
+- Aucune installation, aucune fusion, aucune publication : la
+  branche attend la poussée par le parent après relecture.
