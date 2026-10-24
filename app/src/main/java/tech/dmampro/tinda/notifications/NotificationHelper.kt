@@ -42,7 +42,7 @@ object NotificationHelper {
                 context, Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
 
-    /** Une notification par conversation (l'ID = threadId tronqué). */
+    /** Une notification par conversation (identités : [NotificationIds]). */
     fun showMessage(context: Context, threadId: Long, displayName: String, snippet: String) {
         if (!canNotify(context)) return
         val person = Person.Builder().setName(displayName).build()
@@ -50,12 +50,13 @@ object NotificationHelper {
             .addMessage(snippet, System.currentTimeMillis(), person)
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
+            action = NotificationIds.ACTION_OPEN_THREAD
             putExtra(MainActivity.EXTRA_OPEN_THREAD, threadId)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val contentIntent = PendingIntent.getActivity(
             context,
-            threadId.toInt(),
+            NotificationIds.messageRequestCode(threadId),
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -69,11 +70,12 @@ object NotificationHelper {
             .build()
 
         context.getSystemService(NotificationManager::class.java)
-            ?.notify(threadId.toInt(), notification)
+            ?.notify(NotificationIds.messageNotificationId(threadId), notification)
     }
 
     fun cancelThread(context: Context, threadId: Long) {
-        context.getSystemService(NotificationManager::class.java)?.cancel(threadId.toInt())
+        context.getSystemService(NotificationManager::class.java)
+            ?.cancel(NotificationIds.messageNotificationId(threadId))
     }
 
     /**
@@ -85,12 +87,13 @@ object NotificationHelper {
     fun showDisguised(context: Context, disguisePhrase: String) {
         if (!canNotify(context)) return
         val openIntent = Intent(context, MainActivity::class.java).apply {
+            action = NotificationIds.ACTION_OPEN_VAULT
             putExtra(MainActivity.EXTRA_OPEN_VAULT, true)
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val contentIntent = PendingIntent.getActivity(
             context,
-            VAULT_DISGUISED_ID,
+            NotificationIds.VAULT_REQUEST_CODE,
             openIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -102,8 +105,6 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
         context.getSystemService(NotificationManager::class.java)
-            ?.notify(VAULT_DISGUISED_ID, notification)
+            ?.notify(NotificationIds.VAULT_NOTIFICATION_ID, notification)
     }
-
-    private const val VAULT_DISGUISED_ID = 9012
 }

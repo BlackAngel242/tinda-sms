@@ -87,6 +87,12 @@
     <string name="settings_diagnostic">Diagnostic du rôle SMS</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Vérifie que le téléphone voit bien les 4 composants SMS de Tinda (ceux qu\'Android exige pour la liste des applis SMS par défaut). Faites une capture d\'écran du résultat.</string>
+    <string name="diagnostic_device_title">Appareil (empreinte Build)</string>
+    <string name="diagnostic_device_manufacturer">Fabricant</string>
+    <string name="diagnostic_device_brand">Marque</string>
+    <string name="diagnostic_device_model">Modèle</string>
+    <string name="diagnostic_device_display">Affichage</string>
+    <string name="diagnostic_device_incremental">Version incrémentale</string>
     <string name="diagnostic_loading">Analyse en cours…</string>
     <string name="diagnostic_all_ok">Tout est vert : le téléphone voit correctement Tinda. Si elle n\'apparaît toujours pas dans les applis SMS par défaut, le blocage vient du système.</string>
     <string name="diagnostic_not_ok">Un composant est introuvable : le problème vient de l\'application, pas du téléphone.</string>
@@ -161,6 +167,11 @@
     <string name="scheduled_sent">envoyé</string>
     <string name="scheduled_cancelled">annulé</string>
     <string name="scheduled_failed">échec</string>
+    <string name="scheduled_sending">envoi en cours</string>
+    <string name="scheduled_ambiguous">état incertain</string>
+    <string name="scheduled_resend">Renvoyer ce message</string>
+    <string name="scheduled_resend_warning">Ce message a peut-être déjà été envoyé : son envoi a été interrompu avant le verdict de l\'opérateur. Le renvoyer peut créer un doublon chez le destinataire.</string>
+    <string name="scheduled_resend_confirm">Renvoyer quand même</string>
     <string name="settings_scheduled">SMS programmés</string>
     <string name="settings_scheduled_desc">Voir et annuler les envois différés</string>
     <string name="settings_autoreply">Répondeur automatique</string>
@@ -181,6 +192,8 @@
     <string name="forward_keyword">Mot-clé</string>
     <string name="forward_destination">Numéro destinataire</string>
     <string name="forward_include_content">Inclure le texte du message</string>
+    <string name="forward_allow_codes">Transférer les codes de vérification</string>
+    <string name="forward_allow_codes_hint">Désactivé par défaut : un message contenant un code de vérification détecté n\'est pas transféré et la suspension est journalisée. N\'activez que pour un destinataire de confiance.</string>
     <string name="forward_loop_warning">Sécurité : le transfert vers l\'expéditeur lui-même est interdit pour éviter les boucles.</string>
     <string name="forward_to">Vers %1$s</string>
     <string name="forward_source_number">N° %1$s</string>
@@ -244,7 +257,7 @@
     <string name="settings_section_automation">Automatisation &amp; règles</string>
     <string name="settings_section_security">Sécurité &amp; confidentialité</string>
     <string name="settings_dualsim_title">Double SIM &amp; Routage Intelligent</string>
-    <string name="settings_dualsim_subtitle">Moteur 100% SMS hors-ligne actif</string>
+    <string name="settings_dualsim_subtitle" formatted="false">Moteur 100% SMS hors-ligne actif</string>
     <string name="settings_sim_label">SIM %1$d</string>
     <string name="settings_advanced_desc">Gestes, diagnostic, archivés</string>
     <string name="settings_diagnostic_desc">Vérifier le rôle SMS et l\'envoi</string>

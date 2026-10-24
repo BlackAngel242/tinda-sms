@@ -134,9 +134,16 @@ class VaultRepository @Inject constructor(
         if (!isSetup()) return false
         val bm = context.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
             ?: return false
-        val r = bm.canAuthenticate(
-            android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG,
-        )
+        // canAuthenticate(authenticators) et BIOMETRIC_STRONG sont API 30 ;
+        // en API 29, l'appel sans argument couvre le même contrôle.
+        val r = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            bm.canAuthenticate(
+                android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            bm.canAuthenticate()
+        }
         return r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS
     }
 
@@ -206,16 +213,7 @@ class VaultRepository @Inject constructor(
     suspend fun matchesSecretRule(address: String, body: String): Boolean {
         if (!isSetup()) return false
         val rules = mainDb.secretRuleDao().getAll()
-        if (rules.isEmpty()) return false
-        val normAddr = address.filter { it.isDigit() || it == '+' }
-        val lowerBody = body.lowercase()
-        return rules.any { rule ->
-            when (rule.type) {
-                RULE_NUMBER -> normAddr.endsWith(rule.value) || rule.value.endsWith(normAddr)
-                RULE_KEYWORD -> lowerBody.contains(rule.value)
-                else -> false
-            }
-        }
+        return SecretRuleMatching.matches(address, body, rules)
     }
 
     // ------------------------------------------------------------------

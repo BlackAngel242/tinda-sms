@@ -16,12 +16,18 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import tech.dmampro.tinda.data.local.ArchivedThread
 import tech.dmampro.tinda.data.local.Conversation
 import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
+import tech.dmampro.tinda.data.local.ScheduledStatus
 import tech.dmampro.tinda.data.local.TindaDatabase
+import tech.dmampro.tinda.sms.MultipartStatus
+import tech.dmampro.tinda.sms.PartOutcome
+import tech.dmampro.tinda.sms.PartSentState
 import tech.dmampro.tinda.ui.conversations.ConversationItem
 import tech.dmampro.tinda.util.TindaLogger
 import javax.inject.Inject
@@ -43,6 +49,68 @@ class SmsRepository @Inject constructor(
 ) {
     private val refreshSignal = MutableSharedFlow<Unit>(replay = 1, extraBufferCapacity = 1)
     private val nameCache = mutableMapOf<String, String>()
+
+    /**
+     * Sérialise les transitions de statut liées aux accusés : lecture
+     * des segments, agrégation et écriture doivent être atomiques
+     * entre elles, sinon un calcul ancien (encore SENDING) peut
+     * persister après un échec ou une livraison confirmée par un
+     * callback concurrent. Le dépôt est un singleton : un seul verrou
+     * global suffit. En complément, l'écriture DAO elle-même est
+     * conditionnelle (jamais d'écrasement d'un statut terminal).
+     */
+    private val statusMutex = Mutex()
+
+    /**
+     * Synchronisation testable des transitions de statut : Room est
+     * la source de vérité et le fournisseur reçoit uniquement le
+     * statut relui après la tentative d'écriture conditionnelle.
+     */
+    private val messageStatusSync = MessageStatusSync(
+        localStore = object : LocalMessageStatusStore {
+            override suspend fun find(token: String): StoredMessageStatus? =
+                db.messageDao().findByToken(token)?.let { message ->
+                    StoredMessageStatus(
+                        status = message.status,
+                        providerId = message.providerId,
+                        failureCode = message.failureCode,
+                    )
+                }
+
+            override suspend fun tryTransition(
+                token: String,
+                status: MessageStatus,
+                failureCode: Int?,
+            ): Int = db.messageDao().updateStatusAndFailureByTokenIfNotTerminal(
+                token,
+                status,
+                failureCode,
+            )
+        },
+        providerWriter = object : ProviderMessageStatusWriter {
+            override suspend fun write(providerId: Long, status: MessageStatus) {
+                try {
+                    val values = ContentValues().apply {
+                        put(
+                            Telephony.Sms.STATUS,
+                            when (status) {
+                                MessageStatus.DELIVERED, MessageStatus.SENT ->
+                                    Telephony.Sms.STATUS_COMPLETE
+                                MessageStatus.FAILED -> Telephony.Sms.STATUS_FAILED
+                                else -> Telephony.Sms.STATUS_NONE
+                            },
+                        )
+                    }
+                    context.contentResolver.update(
+                        Telephony.Sms.CONTENT_URI, values,
+                        "${Telephony.Sms._ID} = ?", arrayOf(providerId.toString()),
+                    )
+                } catch (e: SecurityException) {
+                    TindaLogger.w(TAG, "updateMessageStatus sans permission d'écriture SMS")
+                }
+            }
+        },
+    )
 
     /** Vrai si Tinda est l'application SMS par défaut du système. */
     fun isDefaultSmsApp(): Boolean =
@@ -275,36 +343,120 @@ class SmsRepository @Inject constructor(
     /**
      * Met à jour le statut d'un message sortant, avec le code d'échec
      * éventuel (diagnostic visible dans l'app, jamais de contenu ni numéro).
+     *
+     * Point d'entrée externe : il prend le verrou des accusés. Les
+     * chemins déjà sérialisés appellent [updateMessageStatusInternal].
      */
     suspend fun updateMessageStatus(token: String, status: MessageStatus, failureCode: Int?) =
-        withContext(Dispatchers.IO) {
-            db.messageDao().updateStatusAndFailureByToken(token, status, failureCode)
-            // Best effort : reflète aussi le statut dans le provider système.
-            try {
-                val row = db.messageDao().findByToken(token)
-                val providerId = row?.providerId
-                if (providerId != null) {
-                    val values = ContentValues().apply {
-                        put(
-                            Telephony.Sms.STATUS,
-                            when (status) {
-                                MessageStatus.DELIVERED, MessageStatus.SENT ->
-                                    Telephony.Sms.STATUS_COMPLETE
-                                MessageStatus.FAILED -> Telephony.Sms.STATUS_FAILED
-                                else -> Telephony.Sms.STATUS_NONE
-                            },
-                        )
-                    }
-                    context.contentResolver.update(
-                        Telephony.Sms.CONTENT_URI, values,
-                        "${Telephony.Sms._ID} = ?", arrayOf(providerId.toString()),
-                    )
-                }
-            } catch (e: SecurityException) {
-                TindaLogger.w(TAG, "updateMessageStatus sans permission d'écriture SMS")
+        statusMutex.withLock {
+            withContext(Dispatchers.IO) {
+                updateMessageStatusInternal(token, status, failureCode)
             }
-            notifyChanged()
         }
+
+    /**
+     * Transition à appeler uniquement sous [statusMutex].
+     *
+     * [MessageStatusSync] tente l'écriture Room conditionnelle, relit
+     * l'état persisté et aligne le fournisseur sur cet état, y compris
+     * lorsque la transition demandée a été refusée.
+     */
+    private suspend fun updateMessageStatusInternal(
+        token: String,
+        status: MessageStatus,
+        failureCode: Int?,
+    ) {
+        val result = messageStatusSync.update(token, status, failureCode)
+        if (result != MessageStatusSyncResult.NotFound) notifyChanged()
+    }
+
+    /**
+     * Enregistre le verdict d'émission d'un segment (L3) puis recalcule
+     * le statut du message par agrégation des segments. Un message créé
+     * avant le suivi par segment n'a aucune ligne de segment : repli
+     * sur l'ancien comportement direct pour ne pas le laisser bloqué.
+     */
+    suspend fun recordPartSent(
+        token: String,
+        partIndex: Int,
+        state: PartSentState,
+        failureCode: Int?,
+    ) = statusMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val updated = db.messagePartDao().updateSent(token, partIndex, state, failureCode)
+            if (updated == 0) {
+                // Repli historique (aucune ligne de segment) : même
+                // protection, l'écriture passe par le DAO conditionnel.
+                when (state) {
+                    PartSentState.CONFIRMED ->
+                        updateMessageStatusInternal(token, MessageStatus.SENT, null)
+                    PartSentState.FAILED ->
+                        updateMessageStatusInternal(token, MessageStatus.FAILED, failureCode)
+                    else -> Unit
+                }
+                resolveScheduledInternal(token)
+            } else {
+                refreshAggregatedStatus(token)
+            }
+        }
+    }
+
+    /** Enregistre la livraison d'un segment (L3) puis recalcule le statut agrégé. */
+    suspend fun recordPartDelivered(token: String, partIndex: Int) =
+        statusMutex.withLock {
+            withContext(Dispatchers.IO) {
+                val updated = db.messagePartDao().updateDelivered(token, partIndex)
+                if (updated == 0) {
+                    updateMessageStatusInternal(token, MessageStatus.DELIVERED, null)
+                    resolveScheduledInternal(token)
+                } else {
+                    refreshAggregatedStatus(token)
+                }
+            }
+        }
+
+    /** À appeler uniquement sous [statusMutex] (ou depuis un chemin déjà sérialisé). */
+    private suspend fun refreshAggregatedStatus(token: String) {
+        val message = db.messageDao().findByToken(token) ?: return
+        val parts = db.messagePartDao().getByToken(token)
+        if (parts.isNotEmpty()) {
+            val newStatus = MultipartStatus.aggregate(
+                parts.map { PartOutcome(it.sentState, it.delivered) },
+                message.status,
+            )
+            if (newStatus != message.status) {
+                val failureCode = if (newStatus == MessageStatus.FAILED) {
+                    parts.firstOrNull { it.sentState == PartSentState.FAILED }?.failureCode
+                } else {
+                    null
+                }
+                updateMessageStatusInternal(token, newStatus, failureCode)
+            }
+        }
+        resolveScheduledInternal(token)
+    }
+
+    /**
+     * Résout un envoi programmé dont la tentative porte ce jeton (L3).
+     * Appelée après chaque accusé et juste après l'attache du jeton par
+     * le worker : les deux ordres d'arrivée convergent. Un accusé tardif
+     * résout aussi une tentative déjà balayée en AMBIGUOUS (DAO).
+     */
+    suspend fun resolveScheduled(token: String) = statusMutex.withLock {
+        withContext(Dispatchers.IO) { resolveScheduledInternal(token) }
+    }
+
+    /** À appeler uniquement sous [statusMutex]. */
+    private suspend fun resolveScheduledInternal(token: String) {
+        val message = db.messageDao().findByToken(token) ?: return
+        when (message.status) {
+            MessageStatus.SENT, MessageStatus.DELIVERED ->
+                db.scheduledMessageDao().resolveByToken(token, ScheduledStatus.SENT)
+            MessageStatus.FAILED ->
+                db.scheduledMessageDao().resolveByToken(token, ScheduledStatus.FAILED)
+            else -> Unit
+        }
+    }
 
     // ---- Lecture du provider ----
 

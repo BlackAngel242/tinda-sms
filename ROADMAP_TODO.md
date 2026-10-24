@@ -1,84 +1,26 @@
-# Tinda SMS : feuille de route lots 2 à 5
+# Tinda SMS : feuille de route
 
-État au 18 oct. 2026 au soir. Lots 0 et 1 terminés et validés sur le terrain (Tecno/HiOS).
+Mise à jour le 21 octobre 2026 (lot L0 du plan de reprise, PR nº 1).
+État détaillé et preuves : `docs/validation/matrice-fonctionnalites.md`.
 Conventions : pas de contenu SMS ni numéro dans les logs/commits, jamais de code YAATA.
 
-## LOT 2 : recherche, thèmes, gestes, liste noire (code fini, reste le terrain)
+## Fait et poussé sur master (au 19 octobre 2026, SHA dfddee7)
 
-- [x] F3 recherche plein texte (FTS4)
-- [x] F4 6 thèmes + Material You
-- [x] F5 gestes swipe
-- [x] F6 son d'envoi (validé sur le terrain : OK)
-- [x] F7 liste noire + journal
-- [x] Écran Paramètres + i18n FR/EN
-- [ ] Valider la recherche sur le téléphone
-- [ ] Valider les 6 thèmes sur le téléphone
-- [ ] Valider les gestes swipe sur le téléphone
-- [ ] Valider la liste noire + journal sur le téléphone
+- Lot 0 : socle Kotlin/Compose, design system, navigation.
+- Lot 1 : téléphonie réelle (rôle SMS par défaut, réception, envoi, accusés, double SIM, onboarding). Validé sur le terrain.
+- Lot 2 : recherche FTS4, 6 thèmes, gestes swipe, son d'envoi, liste noire + journal, paramètres FR/EN. Validé sur le terrain (retour global de SmokeSama).
+- Lot 3 : F9 SMS programmés (WorkManager), F10 répondeur, F11 transfert auto, F14 envoi groupé. F9/F10/F11 validés sur le terrain ; F14 non validé.
+- Lot 4 : coffre secret (SQLCipher, PIN 4 à 6 chiffres, biométrie, liste jaune, notification déguisée) et suppression automatique. Coffre validé sur le terrain le 19 octobre ; suppression automatique non validée.
+- Design Radiant Slate (maquettes Stitch) : liste, fil, paramètres, nouveau message ; statistiques SMS, attribution SIM par contact, épinglage (backend), filtre Codes 2FA, favoris, expiration OTP, backend brouillons. Builds correspondants compilés et testés, **non installés** sur le téléphone (accès adb coupé le 19 octobre).
 
-## Design : thème façon YAATA (demandé par SmokeSama, 18 oct.)
-- [ ] Recréer le style YAATA de zéro (bulles, espacements, couleurs),
-  sans reprendre code, assets ni marque (ligne rouge)
-- [ ] Améliorer ensuite par-dessus
+## Reprise en cours (branche claude/reprise)
 
-## LOT 3 : automatismes (dépend des lots 0 à 2, base validée)
+- L0 : référence reproductible (fichiers dans `docs/validation/`), PRD versé au dépôt.
+- Correctifs prioritaires : routage des expéditeurs alphanumériques (coffre), normalisation des numéros et liste noire, collisions de notifications, thème initial, migrations sans perte.
+- Puis, selon le plan de la PR nº 1 : L1 coffre et session (arbitrages de SmokeSama requis), L2 migrations et suppression, L3 fiabilité des envois, L4 interface (protocole dans `docs/validation/protocole-ui-ux.md`), L5 recette appareil.
 
-- F9 SMS programmés
-  - [ ] Table ScheduledMessage (Room)
-  - [ ] UI de planification (sélecteur date/heure)
-  - [ ] WorkManager + replanification au redémarrage
-  - [ ] Écran de gestion (liste, annuler)
-  - [ ] Tests
-- F10 Répondeur automatique
-  - [ ] Règles (plages horaires, contacts)
-  - [ ] Message de réponse configurable
-  - [ ] Déclenchement sur SMS entrant
-  - [ ] Tests
-- F11 Transfert automatique
-  - [ ] Règles expéditeur vers destinataire
-  - [ ] Protection anti-boucle
-  - [ ] Tests
-- F14 Envoi groupé
-  - [ ] Sélection multiple de contacts
-  - [ ] Suivi par destinataire
-  - [ ] Tests
-- [ ] Build + APK + validation terrain
+## En attente
 
-## LOT 4 : coffre-fort et suppression auto (dépend du lot 3)
-
-Concept étendu « coffre secret » (idée de SmokeSama, 18 oct.) :
-- Entrée discrète : appui long sur le + ouvre la zone secrète
-- Ouverture par code PIN ou biométrie (le PIN reste obligatoire en repli)
-- Liste jaune : numéros ajoutés à la main ou mots-clés ; leurs messages
-  vont directement au coffre
-- Notification déguisée : message banal avec une phrase de reconnaissance
-  configurable par l'utilisateur
-- Chiffrement réel (SQLCipher déjà intégré), pas de « mini »
-
-- Coffre-fort
-  - [ ] Schéma chiffré (SQLCipher déjà intégré)
-  - [ ] PIN, oubli = données perdues (DEC-004)
-  - [ ] Déverrouillage par SMS #PIN, jamais stocké (DEC-005)
-  - [ ] Déplacement des conversations vers le coffre
-  - [ ] UI du coffre
-  - [ ] Lentille sécurité avant intégration (AGENTS.md)
-  - [ ] Tests
-- Suppression automatique
-  - [ ] Règles (âge des messages, par conversation)
-  - [ ] Worker de nettoyage
-  - [ ] Tests
-- [ ] Build + APK + validation terrain
-
-## LOT 5 : bouclier anti-arnaque (dépend du lot 4 + HYP-02)
-
-- [ ] HYP-02 : collecter le corpus de 200 SMS réels (terrain, bloque le lot)
-- [ ] Moteur de signaux on-device (Mobile Money, urgence, liens...)
-- [ ] UI : signaux d'alerte uniquement, jamais de blocage (DEC-006)
-- [ ] Tests
-- [ ] Build + APK + validation terrain
-
-## Chaîne de dépendances
-
-Lot 3 attend : lots 0 à 2 (fondations, validées le 18 oct.).
-Lot 4 attend : lot 3 (modèle de données et workers stabilisés).
-Lot 5 attend : lot 4 + corpus HYP-02 (200 SMS réels collectés sur le terrain).
+- Lot 5 : bouclier anti-arnaque. Bloqué par HYP-02 : corpus de 200 SMS réels à collecter sur le terrain. Moteur de signaux 100 % local, signalement sans blocage (DEC-006).
+- Validations terrain en retard : F14, suppression automatique, statistiques, favoris, épinglage (UI à finir), verrouillage des options avancées, recréation du PIN du coffre (effacé lors de la désinstallation du 19 octobre).
+- Demandes non planifiées : signature automatique, tags thématiques locaux, sauvegarde/restauration chiffrée, navigation basse 4 onglets (DEC-S6), couleurs SIM personnalisables, faux SMS (DEC-007, lentille sécurité), compagnon web local (DEC-009).

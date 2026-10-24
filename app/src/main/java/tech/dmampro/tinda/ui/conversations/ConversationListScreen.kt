@@ -613,6 +613,10 @@ private fun ConversationCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
     ) {
+        // Le liseré SIM est superposé au bord droit (Box) : le placer
+        // après la ligne de contenu l'ajoutait sous la carte (+40 dp de
+        // vide par carte, constat capture du 19 oct., audit L4).
+        Box {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -697,21 +701,17 @@ private fun ConversationCard(
                 }
             }
         }
-        // Liseré coloré de la SIM sur le bord droit.
+        // Liseré coloré de la SIM, centré sur le bord droit de la carte.
         if (simColor != null) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 2.dp),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(width = 3.dp, height = 40.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(simColor),
-                )
-            }
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 2.dp)
+                    .size(width = 3.dp, height = 40.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(simColor),
+            )
+        }
         }
     }
 }

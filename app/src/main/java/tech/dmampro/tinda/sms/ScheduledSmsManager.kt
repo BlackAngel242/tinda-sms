@@ -11,7 +11,6 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import tech.dmampro.tinda.data.local.ScheduledMessage
-import tech.dmampro.tinda.data.local.ScheduledStatus
 import tech.dmampro.tinda.data.local.TindaDatabase
 import tech.dmampro.tinda.util.SendJournal
 
@@ -59,11 +58,48 @@ class ScheduledSmsManager @Inject constructor(
         return id
     }
 
-    /** Annule un envoi programmé (travail + ligne). */
+    /**
+     * Annule un envoi programmé. L'annulation ne vaut que tant que
+     * l'envoi n'a pas commencé (L3) : une demande SENDING ne peut plus
+     * être rappelée, son statut suivra le verdict du message.
+     */
     suspend fun cancel(id: Long) {
         WorkManager.getInstance(context).cancelUniqueWork(workName(id))
-        db.scheduledMessageDao().updateStatus(id, ScheduledStatus.CANCELLED)
+        db.scheduledMessageDao().cancelIfPending(id)
         SendJournal.log("programmé : annulé")
+    }
+
+    /**
+     * Marque AMBIGUOUS les tentatives SENDING orphelines (L3) : le
+     * processus est mort entre l'appel radio et le verdict, l'état
+     * réel de l'envoi est inconnu. Aucun renvoi automatique ; seul un
+     * renvoi manuel confirmé par l'utilisateur est possible.
+     */
+    suspend fun sweepAmbiguous() {
+        val cutoff = System.currentTimeMillis() - AMBIGUOUS_AFTER_MS
+        for (item in db.scheduledMessageDao().getStaleSending(cutoff)) {
+            // Transition conditionnelle atomique : si un accusé a résolu
+            // la tentative depuis la lecture, 0 ligne est touchée et le
+            // verdict SENT ou FAILED est conservé (jamais écrasé).
+            val transitioned = db.scheduledMessageDao().markAmbiguousIfStillSending(
+                id = item.id,
+                startedAt = item.attemptStartedAt,
+                token = item.attemptToken,
+            )
+            if (transitioned == 1) {
+                tech.dmampro.tinda.util.EventLog.log("scheduled.ambiguous")
+                SendJournal.log("programmé : état incertain (envoi interrompu sans verdict)")
+            }
+        }
+    }
+
+    /** Renvoi manuel d'une demande AMBIGUOUS, après confirmation du risque de doublon. */
+    suspend fun resendAmbiguous(id: Long) {
+        val now = System.currentTimeMillis()
+        if (db.scheduledMessageDao().requeueAmbiguous(id, now) > 0) {
+            enqueue(id, 0)
+            SendJournal.log("programmé : renvoi manuel d'un état incertain")
+        }
     }
 
     /** Supprime définitivement une ligne (historique). */
@@ -103,4 +139,9 @@ class ScheduledSmsManager @Inject constructor(
     }
 
     private fun workName(id: Long) = "${ScheduledSmsWorker.WORK_TAG}_$id"
+
+    private companion object {
+        /** Une tentative SENDING plus vieille que ce délai est orpheline. */
+        const val AMBIGUOUS_AFTER_MS = 10 * 60 * 1000L
+    }
 }

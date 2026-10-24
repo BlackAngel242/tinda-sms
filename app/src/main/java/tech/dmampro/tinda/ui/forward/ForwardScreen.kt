@@ -218,6 +218,7 @@ private fun ForwardEditDialog(
     var sourceValue by remember { mutableStateOf(rule.sourceValue) }
     var destination by remember { mutableStateOf(rule.destination) }
     var includeContent by remember { mutableStateOf(rule.includeContent) }
+    var allowCodes by remember { mutableStateOf(rule.allowVerificationCodes) }
     var typeOpen by remember { mutableStateOf(false) }
     val valid = name.isNotBlank() && sourceValue.isNotBlank() && destination.isNotBlank()
 
@@ -314,6 +315,29 @@ private fun ForwardEditDialog(
                     }
                 }
                 item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.forward_allow_codes),
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Switch(
+                            checked = allowCodes,
+                            onCheckedChange = { allowCodes = it },
+                        )
+                    }
+                }
+                item {
+                    Text(
+                        stringResource(R.string.forward_allow_codes_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                item {
                     Text(
                         stringResource(R.string.forward_loop_warning),
                         style = MaterialTheme.typography.bodySmall,
@@ -332,6 +356,7 @@ private fun ForwardEditDialog(
                             sourceValue = sourceValue.trim(),
                             destination = destination.trim(),
                             includeContent = includeContent,
+                            allowVerificationCodes = allowCodes,
                         ),
                     )
                 },

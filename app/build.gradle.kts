@@ -20,6 +20,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 4 ABI -> 2 : x86/x86_64 ne servent qu'aux émulateurs. -10 Mo d'APK,
         // crucial pour les connexions lentes (testeur sous réseau faible).
         ndk {
@@ -47,19 +48,31 @@ android {
     // pas aux redémarrages de la machine (clé perdue le 19 oct. 2026 ->
     // INSTALL_FAILED_UPDATE_INCOMPATIBLE). Clé versionnée hors git dans
     // keystore/, mots de passe dans keystore.properties (gitignoré).
+    //
+    // La signature permanente n'est appliquée que si la clé est
+    // réellement présente sur la machine (poste de SmokeSama et cette
+    // machine de développement). En CI, la clé permanente ne doit
+    // jamais être publiée : repli sur la signature debug standard
+    // d'AGP, générée sur le runner et jetable. La signature installée
+    // sur le téléphone ne change donc pas.
     val keystoreProps = Properties()
     val keystorePropsFile = rootProject.file("keystore.properties")
     if (keystorePropsFile.exists()) {
         keystorePropsFile.inputStream().use { keystoreProps.load(it) }
     }
+    val permanentStoreFile = rootProject.file(
+        keystoreProps.getProperty("storeFile", "keystore/tinda-debug.keystore"),
+    )
+    val permanentKeystorePresent =
+        keystorePropsFile.exists() && permanentStoreFile.exists()
     signingConfigs {
-        create("tindaDebug") {
-            storeFile = rootProject.file(
-                keystoreProps.getProperty("storeFile", "keystore/tinda-debug.keystore"),
-            )
-            storePassword = keystoreProps.getProperty("storePassword", "")
-            keyAlias = keystoreProps.getProperty("keyAlias", "tinda-debug")
-            keyPassword = keystoreProps.getProperty("keyPassword", "")
+        if (permanentKeystorePresent) {
+            create("tindaDebug") {
+                storeFile = permanentStoreFile
+                storePassword = keystoreProps.getProperty("storePassword", "")
+                keyAlias = keystoreProps.getProperty("keyAlias", "tinda-debug")
+                keyPassword = keystoreProps.getProperty("keyPassword", "")
+            }
         }
     }
 
@@ -73,7 +86,12 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            signingConfig = signingConfigs.getByName("tindaDebug")
+            signingConfig = if (permanentKeystorePresent) {
+                signingConfigs.getByName("tindaDebug")
+            } else {
+                // CI : signature debug standard d'AGP (clé du runner).
+                signingConfigs.getByName("debug")
+            }
             // Minification aussi en debug : l'APK passe de ~32 Mo à ~15 Mo,
             // téléchargeable sur connexion lente. R8 full mode : Hilt, Room
             // et Compose fournissent leurs règles via leurs AAR.
@@ -83,8 +101,23 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // L'APK de test a sa propre configuration R8 (AGP ne
+            // réutilise pas proguard-rules.pro) : annotations Error
+            // Prone d'androidx.test à ignorer, voir le fichier.
+            testProguardFiles("proguard-rules-test.pro")
+        }
+        // Variante réservée aux tests instrumentés : le paquet de
+        // test et l'application doivent garder leurs classes Kotlin
+        // et AndroidX accessibles par réflexion. Le debug utilisé
+        // sur téléphone conserve sa réduction et sa signature.
+        create("ciTest") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
+    testBuildType = "ciTest"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -96,7 +129,19 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
+
+// Schémas Room exportés et versionnés (P0-5) : app/schemas/.
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// MigrationTestHelper lit les schémas exportés depuis les assets du
+// test instrumenté : voir le sourceSets androidTest dans android {}.
 
 dependencies {
     val bom = platform(libs.androidx.compose.bom)
@@ -125,4 +170,11 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // Uniquement pour les tests instrumentés exécutés par la CI ou
+    // sur appareil ; ces artefacts ne sont pas requis par l'app.
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }

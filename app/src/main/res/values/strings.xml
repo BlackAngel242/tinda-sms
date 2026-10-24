@@ -87,6 +87,12 @@
     <string name="settings_diagnostic">SMS role diagnostic</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Checks that the phone properly sees Tinda\'s 4 SMS components (the ones Android requires for the default SMS app list). Take a screenshot of the result.</string>
+    <string name="diagnostic_device_title">Device (Build fingerprint)</string>
+    <string name="diagnostic_device_manufacturer">Manufacturer</string>
+    <string name="diagnostic_device_brand">Brand</string>
+    <string name="diagnostic_device_model">Model</string>
+    <string name="diagnostic_device_display">Display</string>
+    <string name="diagnostic_device_incremental">Incremental version</string>
     <string name="diagnostic_loading">Analyzing…</string>
     <string name="diagnostic_all_ok">All green: the phone sees Tinda correctly. If it still doesn\'t show up in the default SMS apps, the block comes from the system.</string>
     <string name="diagnostic_not_ok">A component is missing: the problem comes from the app, not the phone.</string>
@@ -161,6 +167,11 @@
     <string name="scheduled_sent">sent</string>
     <string name="scheduled_cancelled">cancelled</string>
     <string name="scheduled_failed">failed</string>
+    <string name="scheduled_sending">sending</string>
+    <string name="scheduled_ambiguous">uncertain state</string>
+    <string name="scheduled_resend">Resend this message</string>
+    <string name="scheduled_resend_warning">This message may already have been sent: its sending was interrupted before the operator\'s verdict. Resending may create a duplicate for the recipient.</string>
+    <string name="scheduled_resend_confirm">Resend anyway</string>
     <string name="settings_scheduled">Scheduled SMS</string>
     <string name="settings_scheduled_desc">View and cancel deferred sends</string>
     <string name="settings_autoreply">Auto-reply</string>
@@ -181,6 +192,8 @@
     <string name="forward_keyword">Keyword</string>
     <string name="forward_destination">Destination number</string>
     <string name="forward_include_content">Include message text</string>
+    <string name="forward_allow_codes">Forward verification codes</string>
+    <string name="forward_allow_codes_hint">Off by default: a message containing a detected verification code is not forwarded and the hold is logged. Enable only for a trusted recipient.</string>
     <string name="forward_loop_warning">Safety: forwarding to the sender itself is forbidden to avoid loops.</string>
     <string name="forward_to">To %1$s</string>
     <string name="forward_source_number">No. %1$s</string>
@@ -244,7 +257,7 @@
     <string name="settings_section_automation">Automation &amp; rules</string>
     <string name="settings_section_security">Security &amp; privacy</string>
     <string name="settings_dualsim_title">Dual SIM &amp; Smart Routing</string>
-    <string name="settings_dualsim_subtitle">100% SMS engine, offline</string>
+    <string name="settings_dualsim_subtitle" formatted="false">100% SMS engine, offline</string>
     <string name="settings_sim_label">SIM %1$d</string>
     <string name="settings_advanced_desc">Gestures, diagnostics, archived</string>
     <string name="settings_diagnostic_desc">Check the SMS role and sending</string>
