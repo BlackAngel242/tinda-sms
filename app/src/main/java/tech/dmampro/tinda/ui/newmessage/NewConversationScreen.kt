@@ -64,16 +64,6 @@ import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SimRepository
 import tech.dmampro.tinda.data.SmsRepository
 import tech.dmampro.tinda.sms.SmsSender
-import tech.dmampro.tinda.theme.RadiantBg
-import tech.dmampro.tinda.theme.RadiantOnPrimary
-import tech.dmampro.tinda.theme.RadiantPrimary
-import tech.dmampro.tinda.theme.RadiantSim1
-import tech.dmampro.tinda.theme.RadiantSim2
-import tech.dmampro.tinda.theme.RadiantSurface
-import tech.dmampro.tinda.theme.RadiantSurfaceLow
-import tech.dmampro.tinda.theme.RadiantText
-import tech.dmampro.tinda.theme.RadiantTextSecondary
-import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.util.SendJournal
 import tech.dmampro.tinda.util.SendSoundPlayer
 import javax.inject.Inject
@@ -153,7 +143,7 @@ class NewConversationViewModel @Inject constructor(
     }
 }
 
-/** Nouveau message : destinataire, SIM visible, texte, envoi (US-001). Style Radiant Slate. */
+/** Nouveau message : destinataire, SIM visible, texte, envoi (US-001). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewConversationScreen(
@@ -175,21 +165,21 @@ fun NewConversationScreen(
     }
 
     Scaffold(
-        containerColor = RadiantBg,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
                             "TINDA SMS",
-                            color = RadiantPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 2.sp,
                         )
                         Text(
                             stringResource(R.string.new_conversation_title),
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                         )
@@ -200,24 +190,24 @@ fun NewConversationScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
-                            tint = RadiantText,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = RadiantBg),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(RadiantBg)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             // Espacement resserré : fini l'espace mort entre les blocs.
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Destinataire : carte Radiant.
+            // Destinataire.
             OutlinedTextField(
                 value = address,
                 onValueChange = { address = it },
@@ -233,15 +223,15 @@ fun NewConversationScreen(
                         Icon(
                             Icons.Filled.Contacts,
                             contentDescription = stringResource(R.string.groupsend_pick_contacts),
-                            tint = RadiantPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 },
                 shape = RoundedCornerShape(16.dp),
-                colors = radiantTextFieldColors(),
+                colors = tindaTextFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
-            // SIM : pastilles avec point couleur.
+            // SIM : pastilles neutres, libellé explicite.
             if (uiState.sims.size > 1) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -249,11 +239,12 @@ fun NewConversationScreen(
                 ) {
                     Text(
                         stringResource(R.string.sim_choose),
-                        color = RadiantTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium,
                     )
                     uiState.sims.forEachIndexed { index, sim ->
-                        val simColor = if (index == 0) RadiantSim1 else RadiantSim2
+                        // Pastille neutre, libellé explicite « SIM n nom ».
+                        val simColor = MaterialTheme.colorScheme.onSurfaceVariant
                         FilterChip(
                             selected = sim.subscriptionId == uiState.selectedSimId,
                             onClick = { viewModel.onSimSelected(sim.subscriptionId) },
@@ -267,15 +258,15 @@ fun NewConversationScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        sim.displayName,
+                                        "SIM ${index + 1} ${sim.displayName}",
                                         color = if (sim.subscriptionId == uiState.selectedSimId)
-                                            RadiantOnPrimary else RadiantText,
+                                            MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     )
                                 }
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = RadiantPrimary,
-                                containerColor = RadiantSurfaceLow,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             ),
                             border = null,
                         )
@@ -288,7 +279,7 @@ fun NewConversationScreen(
                 onValueChange = { body = it },
                 label = { Text(stringResource(R.string.message_hint)) },
                 shape = RoundedCornerShape(16.dp),
-                colors = radiantTextFieldColors(),
+                colors = tindaTextFieldColors(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(min = 120.dp, max = 280.dp),
@@ -305,10 +296,10 @@ fun NewConversationScreen(
                 onClick = { viewModel.send(address, body, onThreadOpened) },
                 enabled = !uiState.sending,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = RadiantPrimary,
-                    contentColor = RadiantOnPrimary,
-                    disabledContainerColor = RadiantSurface,
-                    disabledContentColor = RadiantTextTertiary,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    disabledContentColor = MaterialTheme.colorScheme.outline,
                 ),
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth(),
@@ -324,20 +315,20 @@ fun NewConversationScreen(
     }
 }
 
-/** Couleurs de champ Radiant pour les OutlinedTextField. */
+/** Couleurs de champ du thème pour les OutlinedTextField. */
 @Composable
-private fun radiantTextFieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedContainerColor = RadiantSurfaceLow,
-    unfocusedContainerColor = RadiantSurfaceLow,
-    disabledContainerColor = RadiantSurfaceLow,
-    errorContainerColor = RadiantSurfaceLow,
-    focusedTextColor = RadiantText,
-    unfocusedTextColor = RadiantText,
-    focusedLabelColor = RadiantPrimary,
-    unfocusedLabelColor = RadiantTextSecondary,
-    cursorColor = RadiantPrimary,
-    focusedBorderColor = RadiantPrimary,
-    unfocusedBorderColor = RadiantTextTertiary.copy(alpha = 0.3f),
+private fun tindaTextFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    errorContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+    focusedLabelColor = MaterialTheme.colorScheme.primary,
+    unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor = MaterialTheme.colorScheme.primary,
+    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
 )
 
 /**

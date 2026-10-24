@@ -57,9 +57,10 @@ class MigrationExecutionTest {
     }
 
     @Test
-    fun `chaque migration emet son sql et la chaine complete en emet 16`() {
+    fun `chaque migration emet son sql et la chaine complete en emet 17`() {
         val sql = runAllMigrations()
-        assertEquals(16, sql.size)
+        assertEquals(17, sql.size)
+        assertTrue(sql.any { it.contains("ALTER TABLE messages ADD COLUMN simSlot") })
         assertTrue(sql.any { it.contains("ALTER TABLE messages ADD COLUMN failureCode") })
         assertTrue(sql.any { it.contains("CREATE TABLE IF NOT EXISTS secret_rules") })
         assertTrue(sql.any { it.contains("CREATE TABLE IF NOT EXISTS scheduled_messages") })

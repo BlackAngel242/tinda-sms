@@ -98,6 +98,13 @@ data class Message(
     val token: String? = null,
     /** Abonnement utilisé pour l'envoi (-1 = inconnu). */
     val subscriptionId: Int = -1,
+    /**
+     * Emplacement (slotIndex 0, 1...) de la SIM au moment de l'envoi,
+     * conservé avec le message (version 12). L'emplacement actuel
+     * d'une carte ne prouve pas son emplacement passé : sans valeur
+     * conservée, l'historique reste inconnu plutôt qu'inventé.
+     */
+    val simSlot: Int? = null,
     /** Vrai uniquement pour les simulations locales (RB-03 : jamais dans le provider). */
     val simulated: Boolean = false,
     /**
@@ -837,7 +844,7 @@ fun toFtsMatch(input: String): String {
 }
 
 /** Version courante du schéma (source unique, utilisée par @Database et les tests). */
-const val DATABASE_VERSION = 11
+const val DATABASE_VERSION = 12
 
 @Database(
     entities = [
@@ -1017,8 +1024,20 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
  * survivante ne les utilise : Room refusera de les ouvrir plutôt que
  * d'effacer leurs données en silence.
  */
+/**
+ * Migration 11 -> 12 : emplacement SIM conservé au moment de l'envoi.
+ * Colonne nullable : les messages déjà présents n'ont pas
+ * d'emplacement historique prouvé, il reste NULL (inconnu) plutôt
+ * que d'être déduit de l'emplacement actuel de leur carte.
+ */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE messages ADD COLUMN simSlot INTEGER")
+    }
+}
+
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-    MIGRATION_9_10, MIGRATION_10_11,
+    MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
 )

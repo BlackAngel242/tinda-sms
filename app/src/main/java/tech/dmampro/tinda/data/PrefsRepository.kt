@@ -20,6 +20,14 @@ import javax.inject.Singleton
 private val Context.tindaPrefs: DataStore<Preferences> by preferencesDataStore(name = "tinda_prefs")
 
 /**
+ * Résolution Material You (lot 1) : sans préférence enregistrée, les
+ * couleurs dynamiques sont désactivées pour que la palette fixe
+ * choisie s'applique. Une valeur explicitement enregistrée (true ou
+ * false) est toujours respectée. Fonction pure, testée unitairement.
+ */
+fun resolveDynamicColor(stored: Boolean?): Boolean = stored ?: false
+
+/**
  * Préférences applicatives (DataStore) : onboarding, SIM par conversation,
  * thèmes, gestes, son, langue (lot 2).
  * Aucune donnée sensible ici (le PIN du coffre n'y figurera jamais).
@@ -64,9 +72,9 @@ class PrefsRepository @Inject constructor(
         store.edit { it[KEY_THEME_MODE] = mode }
     }
 
-    /** Couleurs dynamiques Material You (Android 12+). */
+    /** Couleurs dynamiques Material You (Android 12+), désactivées par défaut. */
     val dynamicColor: Flow<Boolean> =
-        store.data.map { it[KEY_DYNAMIC_COLOR] != false }
+        store.data.map { resolveDynamicColor(it[KEY_DYNAMIC_COLOR]) }
 
     suspend fun setDynamicColor(enabled: Boolean) {
         store.edit { it[KEY_DYNAMIC_COLOR] = enabled }

@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.filled.SimCard
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -56,8 +54,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,22 +63,14 @@ import tech.dmampro.tinda.R
 import tech.dmampro.tinda.data.AppLanguage
 import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SwipeAction
-import tech.dmampro.tinda.theme.RadiantBg
-import tech.dmampro.tinda.theme.RadiantOnPrimary
-import tech.dmampro.tinda.theme.RadiantPrimary
-import tech.dmampro.tinda.theme.RadiantSim1
-import tech.dmampro.tinda.theme.RadiantSim2
-import tech.dmampro.tinda.theme.RadiantSurface
-import tech.dmampro.tinda.theme.RadiantSurfaceLow
-import tech.dmampro.tinda.theme.RadiantText
-import tech.dmampro.tinda.theme.RadiantTextSecondary
-import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.theme.TINDA_THEMES
+import tech.dmampro.tinda.ui.components.TindaSectionTitle
+import tech.dmampro.tinda.ui.components.TindaSettingsRow
 import tech.dmampro.tinda.theme.ThemeMode
 import tech.dmampro.tinda.util.LocaleHelper
 
 /**
- * Écran des paramètres au style Radiant Slate (design Stitch).
+ * Écran des paramètres, couleurs du thème Material 3 (lot 1).
  * Sections : Double SIM, Préférences, Automatisation, Sécurité, Avancé (verrouillé).
  * Toutes les routes vers les sous-écrans sont conservées.
  */
@@ -100,7 +88,7 @@ fun SettingsScreen(
 ) {
     val themeId by viewModel.themeId.collectAsState(initial = "radiant")
     val themeMode by viewModel.themeMode.collectAsState(initial = ThemeMode.SYSTEM.id)
-    val dynamicColor by viewModel.dynamicColor.collectAsState(initial = true)
+    val dynamicColor by viewModel.dynamicColor.collectAsState(initial = false)
     val swipeLeft by viewModel.swipeLeft.collectAsState(initial = SwipeAction.ARCHIVE.name)
     val swipeRight by viewModel.swipeRight.collectAsState(initial = SwipeAction.REPLY.name)
     val soundEnabled by viewModel.soundEnabled.collectAsState(initial = true)
@@ -121,12 +109,12 @@ fun SettingsScreen(
     var gestureSide by remember { mutableStateOf(true) }
 
     Scaffold(
-        containerColor = RadiantBg,
+        containerColor = MaterialTheme.colorScheme.background,
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .padding(innerPadding)
-                .background(RadiantBg)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -140,26 +128,26 @@ fun SettingsScreen(
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = null,
-                            tint = RadiantText,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             "TINDA SMS",
-                            color = RadiantPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = 2.sp,
                         )
                         Text(
                             stringResource(R.string.settings_title),
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
                             stringResource(R.string.settings_subtitle),
-                            color = RadiantTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -180,9 +168,9 @@ fun SettingsScreen(
             }
 
             // PRÉFÉRENCES.
-            item { RadiantSectionTitle(stringResource(R.string.settings_section_prefs)) }
+            item { TindaSectionTitle(stringResource(R.string.settings_section_prefs)) }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Palette,
                     title = stringResource(R.string.settings_appearance),
                     subtitle = themeLabel(themeId),
@@ -191,7 +179,7 @@ fun SettingsScreen(
                         Icon(
                             if (appearanceOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = null,
-                            tint = RadiantTextTertiary,
+                            tint = MaterialTheme.colorScheme.outline,
                         )
                     },
                 )
@@ -202,7 +190,7 @@ fun SettingsScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(RadiantSurfaceLow)
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
@@ -212,21 +200,21 @@ fun SettingsScreen(
                         )
                         Text(
                             stringResource(R.string.settings_display_mode),
-                            color = RadiantTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.labelMedium,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            RadiantChip(
+                            TindaChip(
                                 label = stringResource(R.string.settings_mode_system),
                                 selected = themeMode == ThemeMode.SYSTEM.id,
                                 onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM.id) },
                             )
-                            RadiantChip(
+                            TindaChip(
                                 label = stringResource(R.string.settings_mode_light),
                                 selected = themeMode == ThemeMode.LIGHT.id,
                                 onClick = { viewModel.setThemeMode(ThemeMode.LIGHT.id) },
                             )
-                            RadiantChip(
+                            TindaChip(
                                 label = stringResource(R.string.settings_mode_dark),
                                 selected = themeMode == ThemeMode.DARK.id,
                                 onClick = { viewModel.setThemeMode(ThemeMode.DARK.id) },
@@ -237,12 +225,18 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(
-                                    stringResource(R.string.settings_dynamic_color),
-                                    color = RadiantText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.weight(1f),
-                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        stringResource(R.string.settings_dynamic_color_phone),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        stringResource(R.string.settings_dynamic_color_hint),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                }
                                 Switch(
                                     checked = dynamicColor,
                                     onCheckedChange = viewModel::setDynamicColor,
@@ -253,7 +247,7 @@ fun SettingsScreen(
                 }
             }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.VolumeUp,
                     title = stringResource(R.string.settings_sound),
                     subtitle = stringResource(R.string.settings_sound_enabled),
@@ -275,7 +269,7 @@ fun SettingsScreen(
                     ) {
                         Text(
                             stringResource(R.string.settings_sound_volume),
-                            color = RadiantTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.width(90.dp),
                         )
@@ -288,19 +282,19 @@ fun SettingsScreen(
                 }
             }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Language,
                     title = stringResource(R.string.settings_language),
                     subtitle = languageLabel(appLanguage),
                     onClick = null,
                     trailing = {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            RadiantChip(
+                            TindaChip(
                                 label = stringResource(R.string.settings_language_french),
                                 selected = appLanguage == AppLanguage.FRENCH.name,
                                 onClick = { viewModel.setLanguage(AppLanguage.FRENCH) },
                             )
-                            RadiantChip(
+                            TindaChip(
                                 label = stringResource(R.string.settings_language_english),
                                 selected = appLanguage == AppLanguage.ENGLISH.name,
                                 onClick = { viewModel.setLanguage(AppLanguage.ENGLISH) },
@@ -311,9 +305,9 @@ fun SettingsScreen(
             }
 
             // AUTOMATISATION & RÈGLES.
-            item { RadiantSectionTitle(stringResource(R.string.settings_section_automation)) }
+            item { TindaSectionTitle(stringResource(R.string.settings_section_automation)) }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Schedule,
                     title = stringResource(R.string.settings_scheduled),
                     subtitle = stringResource(R.string.settings_scheduled_desc),
@@ -322,7 +316,7 @@ fun SettingsScreen(
                 )
             }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.SmartToy,
                     title = stringResource(R.string.settings_autoreply),
                     subtitle = stringResource(R.string.settings_autoreply_desc),
@@ -330,7 +324,7 @@ fun SettingsScreen(
                 )
             }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Forward,
                     title = stringResource(R.string.settings_forward),
                     subtitle = stringResource(R.string.settings_forward_desc),
@@ -338,7 +332,7 @@ fun SettingsScreen(
                 )
             }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.DeleteSweep,
                     title = stringResource(R.string.settings_autodelete),
                     subtitle = stringResource(R.string.settings_autodelete_desc),
@@ -347,9 +341,9 @@ fun SettingsScreen(
             }
 
             // SÉCURITÉ & CONFIDENTIALITÉ.
-            item { RadiantSectionTitle(stringResource(R.string.settings_section_security)) }
+            item { TindaSectionTitle(stringResource(R.string.settings_section_security)) }
             item {
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Block,
                     title = stringResource(R.string.settings_blocklist),
                     subtitle = stringResource(R.string.settings_blocklist_desc),
@@ -361,7 +355,7 @@ fun SettingsScreen(
             // AVANCÉ (verrouillé par le code du coffre).
             item {
                 val locked = !advancedOpen && !advancedUnlocked && viewModel.isAdvancedLocked()
-                RadiantRow(
+                TindaSettingsRow(
                     icon = Icons.Filled.Lock,
                     title = stringResource(R.string.settings_advanced),
                     subtitle = if (locked) stringResource(R.string.settings_advanced_locked_desc)
@@ -377,7 +371,7 @@ fun SettingsScreen(
                         Icon(
                             if (advancedOpen) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                             contentDescription = null,
-                            tint = RadiantTextTertiary,
+                            tint = MaterialTheme.colorScheme.outline,
                         )
                     },
                 )
@@ -386,13 +380,13 @@ fun SettingsScreen(
                 item {
                     Text(
                         stringResource(R.string.settings_gestures),
-                        color = RadiantTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
                 }
                 item {
-                    RadiantRow(
+                    TindaSettingsRow(
                         icon = Icons.AutoMirrored.Filled.Reply,
                         title = stringResource(R.string.settings_swipe_right),
                         subtitle = swipeActionLabel(SwipeAction.valueOf(swipeRight)),
@@ -400,7 +394,7 @@ fun SettingsScreen(
                     )
                 }
                 item {
-                    RadiantRow(
+                    TindaSettingsRow(
                         icon = Icons.AutoMirrored.Filled.Reply,
                         title = stringResource(R.string.settings_swipe_left),
                         subtitle = swipeActionLabel(SwipeAction.valueOf(swipeLeft)),
@@ -408,7 +402,7 @@ fun SettingsScreen(
                     )
                 }
                 item {
-                    RadiantRow(
+                    TindaSettingsRow(
                         icon = Icons.Filled.BugReport,
                         title = stringResource(R.string.settings_diagnostic),
                         subtitle = stringResource(R.string.settings_diagnostic_desc),
@@ -416,7 +410,7 @@ fun SettingsScreen(
                     )
                 }
                 item {
-                    RadiantRow(
+                    TindaSettingsRow(
                         icon = Icons.Filled.ExpandMore,
                         title = stringResource(R.string.settings_archived, archivedItems.size),
                         subtitle = null,
@@ -428,7 +422,7 @@ fun SettingsScreen(
                         item {
                             Text(
                                 stringResource(R.string.settings_archived_empty),
-                                color = RadiantTextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall,
                                 modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
                             )
@@ -444,14 +438,14 @@ fun SettingsScreen(
                             ) {
                                 Text(
                                     item.displayName,
-                                    color = RadiantText,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     style = MaterialTheme.typography.bodyMedium,
                                     modifier = Modifier.weight(1f),
                                 )
                                 TextButton(onClick = { viewModel.unarchive(item.threadId) }) {
                                     Text(
                                         stringResource(R.string.settings_unarchive),
-                                        color = RadiantPrimary,
+                                        color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                             }
@@ -470,12 +464,12 @@ fun SettingsScreen(
                 ) {
                     Text(
                         stringResource(R.string.settings_version, "0.1.0"),
-                        color = RadiantTextTertiary,
+                        color = MaterialTheme.colorScheme.outline,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Text(
                         stringResource(R.string.settings_ondevice),
-                        color = RadiantTextTertiary,
+                        color = MaterialTheme.colorScheme.outline,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -537,100 +531,21 @@ fun SettingsScreen(
     }
 }
 
-/** Titre de section : teal, petites capitales (style Stitch). */
+/** Chip de choix : fond accent quand sélectionné, surface sinon. */
 @Composable
-private fun RadiantSectionTitle(text: String) {
-    Text(
-        text.uppercase(),
-        color = RadiantPrimary,
-        fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.5.sp,
-        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp, start = 4.dp),
-    )
-}
-
-/**
- * Ligne de paramètre Radiant : icône teal, titre blanc, sous-titre gris,
- * chevron ou badge ou contrôle à droite. Toute la ligne est cliquable.
- */
-@Composable
-private fun RadiantRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String?,
-    onClick: (() -> Unit)? = null,
-    badge: String? = null,
-    trailing: @Composable (() -> Unit)? = null,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 12.dp, horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(RadiantPrimary.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = RadiantPrimary, modifier = Modifier.size(22.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                color = RadiantText,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-            )
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    color = RadiantTextSecondary,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                )
-            }
-        }
-        if (badge != null) {
-            Badge(
-                containerColor = RadiantPrimary,
-                contentColor = RadiantOnPrimary,
-            ) { Text(badge) }
-            Spacer(Modifier.width(8.dp))
-        }
-        if (trailing != null) {
-            trailing()
-        } else if (onClick != null) {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = RadiantTextTertiary,
-            )
-        }
-    }
-}
-
-/** Chip Radiant : fond teal quand sélectionné, surface sinon. */
-@Composable
-private fun RadiantChip(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun TindaChip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(
         selected = selected,
         onClick = onClick,
         label = {
             Text(
                 label,
-                color = if (selected) RadiantOnPrimary else RadiantTextSecondary,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         },
         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
-            selectedContainerColor = RadiantPrimary,
-            containerColor = RadiantSurfaceLow,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ),
         border = null,
     )
@@ -643,7 +558,7 @@ private fun StatsRow(stats: SmsStats) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(RadiantSurfaceLow)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
@@ -668,25 +583,25 @@ private fun StatItem(value: String, label: String) {
         Text(
             value,
             style = MaterialTheme.typography.titleLarge,
-            color = RadiantText,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
         )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = RadiantTextSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-/** Carte Double SIM : SIM actives avec couleurs dédiées (rouge / ambre). */
+/** Carte Double SIM : SIM actives, bordures et pastilles neutres, libellés explicites. */
 @Composable
 private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(RadiantSurfaceLow)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -694,22 +609,22 @@ private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(RadiantPrimary.copy(alpha = 0.12f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Filled.SimCard, contentDescription = null, tint = RadiantPrimary)
+                Icon(Icons.Filled.SimCard, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.settings_dualsim_title),
-                    color = RadiantText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     stringResource(R.string.settings_dualsim_subtitle),
-                    color = RadiantPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -717,13 +632,14 @@ private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             sims.forEachIndexed { index, sim ->
-                val simColor = if (index == 0) RadiantSim1 else RadiantSim2
+                // Neutre : le libellé « SIM n » porte l'information.
+                val simColor = MaterialTheme.colorScheme.onSurfaceVariant
                 Column(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, simColor.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                        .background(RadiantSurface)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
                         .padding(12.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -739,7 +655,7 @@ private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
                                 R.string.settings_sim_label,
                                 index + 1,
                             ),
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -747,7 +663,7 @@ private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
                     Spacer(Modifier.height(4.dp))
                     Text(
                         sim.displayName,
-                        color = RadiantTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall,
                     )
                     val sentCount = stats.perSim[sim.subscriptionId] ?: 0
@@ -755,7 +671,7 @@ private fun DualSimCard(sims: List<SimInfo>, stats: SmsStats) {
                         Spacer(Modifier.height(2.dp))
                         Text(
                             stringResource(R.string.stats_sim_sent, sentCount),
-                            color = RadiantTextTertiary,
+                            color = MaterialTheme.colorScheme.outline,
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
@@ -782,8 +698,8 @@ private fun ThemePickerCompact(selectedId: String, onSelect: (String) -> Unit) {
                             .clip(RoundedCornerShape(12.dp))
                             .border(
                                 width = if (selected) 2.dp else 1.dp,
-                                color = if (selected) RadiantPrimary
-                                else RadiantTextTertiary.copy(alpha = 0.3f),
+                                color = if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
                                 shape = RoundedCornerShape(12.dp),
                             )
                             .clickable { onSelect(theme.id) }
@@ -806,7 +722,7 @@ private fun ThemePickerCompact(selectedId: String, onSelect: (String) -> Unit) {
                         Spacer(Modifier.width(8.dp))
                         Text(
                             stringResource(theme.labelRes),
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }

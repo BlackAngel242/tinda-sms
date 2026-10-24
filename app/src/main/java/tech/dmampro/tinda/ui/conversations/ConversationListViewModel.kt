@@ -52,7 +52,7 @@ class ConversationListViewModel @Inject constructor(
     private val _isDefaultSmsApp = MutableStateFlow(true)
     val isDefaultSmsApp: StateFlow<Boolean> = _isDefaultSmsApp
 
-    // ---- Double SIM : infos et filtre (design Radiant Slate) ----
+    // ---- Double SIM : infos et filtre ----
 
     private val _sims = MutableStateFlow<List<SimInfo>>(emptyList())
     val sims: StateFlow<List<SimInfo>> = _sims.asStateFlow()

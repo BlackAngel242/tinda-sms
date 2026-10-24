@@ -67,6 +67,14 @@
     <string name="settings_mode_light">Clair</string>
     <string name="settings_mode_dark">Sombre</string>
     <string name="settings_dynamic_color">Couleurs dynamiques</string>
+    <string name="settings_dynamic_color_phone">Couleurs du téléphone</string>
+    <string name="settings_dynamic_color_hint">Utilise les couleurs du fond d\'écran et remplace la palette fixe choisie. Choisir un thème ci-dessus désactive ce mode.</string>
+    <string name="nav_messages">Messages</string>
+    <string name="nav_automations">Automatisations</string>
+    <string name="nav_settings">Réglages</string>
+    <string name="automations_title">Automatisations</string>
+    <string name="automations_subtitle">Envois programmés et règles automatiques</string>
+    <string name="automations_groupsend_desc">Envoyer le même SMS à plusieurs destinataires, un par un</string>
     <string name="settings_sound">Son d\'envoi</string>
     <string name="settings_sound_enabled">Jouer un son à l\'envoi</string>
     <string name="settings_sound_volume">Volume</string>
@@ -248,6 +256,7 @@
     <string name="day_today">Aujourd\'hui</string>
     <string name="filter_all">Toutes</string>
     <string name="sim_chip_label">SIM %1$d</string>
+    <string name="sim_unknown_label">SIM inconnue</string>
     <string name="copy_code">Copier</string>
     <string name="otp_badge">CODE 2FA</string>
     <string name="recent_messages">MESSAGES RÉCENTS</string>

@@ -79,23 +79,14 @@ import tech.dmampro.tinda.data.SimInfo
 import tech.dmampro.tinda.data.SwipeAction
 import tech.dmampro.tinda.data.local.HIGHLIGHT_END
 import tech.dmampro.tinda.data.local.HIGHLIGHT_START
-import tech.dmampro.tinda.theme.RadiantBg
-import tech.dmampro.tinda.theme.RadiantOnPrimary
-import tech.dmampro.tinda.theme.RadiantPrimary
-import tech.dmampro.tinda.theme.RadiantSim1
-import tech.dmampro.tinda.theme.RadiantSim2
-import tech.dmampro.tinda.theme.RadiantSurface
-import tech.dmampro.tinda.theme.RadiantSurfaceHigh
-import tech.dmampro.tinda.theme.RadiantSurfaceLow
-import tech.dmampro.tinda.theme.RadiantText
-import tech.dmampro.tinda.theme.RadiantTextSecondary
+import tech.dmampro.tinda.ui.components.SimBadge
+import tech.dmampro.tinda.ui.components.TindaAvatar
 import tech.dmampro.tinda.util.OtpDetection
-import tech.dmampro.tinda.theme.RadiantTextTertiary
 import tech.dmampro.tinda.util.EventLog
 import tech.dmampro.tinda.util.TimeFormat
 
 /**
- * Liste des conversations, style "Radiant Slate" (design Stitch) :
+ * Liste des conversations, accueil sobre ardoise (lot 1) :
  * en-tête, recherche en pilule, chips de filtre SIM, cartes de
  * conversation et carte OTP mise en avant.
  */
@@ -153,7 +144,7 @@ fun ConversationListScreen(
     }
 
     Scaffold(
-        containerColor = RadiantBg,
+        containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
             // Entrée discrète du coffre secret : appui long sur le bouton.
             // Bouton reconstruit avec UN SEUL combinedClickable (le
@@ -165,7 +156,7 @@ fun ConversationListScreen(
                     .size(56.dp)
                     .shadow(8.dp, CircleShape)
                     .clip(CircleShape)
-                    .background(RadiantPrimary)
+                    .background(MaterialTheme.colorScheme.primary)
                     .combinedClickable(
                         onClick = {
                             EventLog.log("tap.fab_new_message")
@@ -182,7 +173,7 @@ fun ConversationListScreen(
                 Icon(
                     Icons.Filled.Edit,
                     contentDescription = stringResource(R.string.new_message),
-                    tint = RadiantOnPrimary,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         },
@@ -190,10 +181,10 @@ fun ConversationListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(RadiantBg)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding),
         ) {
-            RadiantHeader(
+            ConversationHeader(
                 onGroupSendClick = {
                     EventLog.log("tap.group_send_open")
                     onGroupSendClick()
@@ -207,23 +198,23 @@ fun ConversationListScreen(
                 placeholder = {
                     Text(
                         stringResource(R.string.search_hint),
-                        color = RadiantTextTertiary,
+                        color = MaterialTheme.colorScheme.outline,
                     )
                 },
                 leadingIcon = {
-                    Icon(Icons.Filled.Search, contentDescription = null, tint = RadiantTextTertiary)
+                    Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.outline)
                 },
                 singleLine = true,
                 shape = CircleShape,
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = RadiantSurface,
-                    unfocusedContainerColor = RadiantSurface,
-                    disabledContainerColor = RadiantSurface,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = RadiantText,
-                    unfocusedTextColor = RadiantText,
-                    cursorColor = RadiantPrimary,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    cursorColor = MaterialTheme.colorScheme.primary,
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,7 +229,7 @@ fun ConversationListScreen(
             } else {
                 if (!isDefaultSmsApp) {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = RadiantSurface),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
@@ -251,13 +242,13 @@ fun ConversationListScreen(
                             Text(
                                 stringResource(R.string.banner_not_default),
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = RadiantText,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f),
                             )
                             TextButton(onClick = onOpenOnboarding) {
                                 Text(
                                     stringResource(R.string.banner_activate),
-                                    color = RadiantPrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                 )
                             }
                         }
@@ -282,14 +273,14 @@ fun ConversationListScreen(
                     ) {
                         Text(
                             stringResource(R.string.empty_conversations),
-                            color = RadiantTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 } else {
                     Text(
                         stringResource(R.string.recent_messages),
                         style = MaterialTheme.typography.labelMedium,
-                        color = RadiantTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 1.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     )
@@ -304,7 +295,6 @@ fun ConversationListScreen(
                                 swipeRightAction = swipeRightAction,
                                 onSwipe = ::doSwipeAction,
                                 onClick = { onConversationClick(item.threadId) },
-                                simColor = simColorFor(item.subscriptionId, sims),
                                 simLabel = simLabelFor(item.subscriptionId, sims),
                             )
                         }
@@ -339,7 +329,7 @@ fun ConversationListScreen(
 
 /** En-tête "TINDA SMS / Conversations" avec actions (style Stitch). */
 @Composable
-private fun RadiantHeader(
+private fun ConversationHeader(
     onGroupSendClick: () -> Unit,
     onSettingsClick: () -> Unit,
 ) {
@@ -353,14 +343,14 @@ private fun RadiantHeader(
             Text(
                 "TINDA SMS",
                 style = MaterialTheme.typography.labelMedium,
-                color = RadiantPrimary,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 2.sp,
             )
             Text(
                 stringResource(R.string.conversations_title),
                 style = MaterialTheme.typography.headlineMedium,
-                color = RadiantText,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -368,24 +358,12 @@ private fun RadiantHeader(
             Icon(
                 Icons.Filled.Group,
                 contentDescription = stringResource(R.string.groupsend_title),
-                tint = RadiantTextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         IconButton(onClick = onSettingsClick) {
-            Icon(Icons.Filled.Settings, contentDescription = null, tint = RadiantTextSecondary)
+            Icon(Icons.Filled.Settings, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-/** Couleur de la pastille SIM : slot 0 = SIM1, slot 1 = SIM2. */
-private fun simColorFor(subscriptionId: Int?, sims: List<SimInfo>): Color? {
-    if (subscriptionId == null) return null
-    val slot = sims.firstOrNull { it.subscriptionId == subscriptionId }?.slotIndex
-        ?: return null
-    return when (slot) {
-        0 -> RadiantSim1
-        1 -> RadiantSim2
-        else -> null
     }
 }
 
@@ -424,18 +402,13 @@ private fun SimFilterChips(
             bottomText = null,
         )
         sims.forEach { sim ->
-            val dot = when (sim.slotIndex) {
-                0 -> RadiantSim1
-                1 -> RadiantSim2
-                else -> RadiantTextTertiary
-            }
             SimChip(
                 active = activeFilter == sim.subscriptionId && !otpActive,
                 onClick = {
                     onSelect(sim.subscriptionId)
                     onOtpToggle(false)
                 },
-                dotColor = dot,
+                dotColor = null,
                 topText = stringResource(R.string.sim_chip_label, sim.slotIndex + 1),
                 bottomText = sim.displayName,
             )
@@ -444,7 +417,7 @@ private fun SimFilterChips(
             SimChip(
                 active = otpActive,
                 onClick = { onOtpToggle(!otpActive) },
-                dotColor = RadiantPrimary,
+                dotColor = MaterialTheme.colorScheme.primary,
                 topText = "${stringResource(R.string.filter_otp)} $otpCount",
                 bottomText = null,
             )
@@ -461,9 +434,9 @@ private fun SimChip(
     topText: String,
     bottomText: String?,
 ) {
-    val bg = if (active) RadiantPrimary else RadiantSurfaceLow
-    val fg = if (active) RadiantOnPrimary else RadiantText
-    val sub = if (active) RadiantOnPrimary.copy(alpha = 0.8f) else RadiantTextSecondary
+    val bg = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow
+    val fg = if (active) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+    val sub = if (active) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = Modifier
             .clip(CircleShape)
@@ -501,15 +474,6 @@ private fun SimChip(
     }
 }
 
-/** Initiales d'un nom (2 lettres max) pour l'avatar. */
-private fun initialsOf(displayName: String): String {
-    val parts = displayName.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
-    if (parts.isEmpty()) return "?"
-    val first = parts[0].first().uppercase()
-    val second = if (parts.size > 1) parts[1].first().uppercase() else ""
-    return "$first$second"
-}
-
 /** Ligne de conversation avec swipe configurable (F5). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -519,7 +483,6 @@ private fun SwipeableConversationRow(
     swipeRightAction: SwipeAction,
     onSwipe: (SwipeAction, ConversationItem) -> Unit,
     onClick: () -> Unit,
-    simColor: Color?,
     simLabel: String?,
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -552,7 +515,7 @@ private fun SwipeableConversationRow(
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(RadiantSurfaceHigh)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .padding(horizontal = 24.dp),
                     contentAlignment = if (direction == SwipeToDismissBoxValue.StartToEnd) {
                         Alignment.CenterStart
@@ -563,7 +526,7 @@ private fun SwipeableConversationRow(
                     Icon(
                         swipeActionIcon(action),
                         contentDescription = null,
-                        tint = RadiantPrimary,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
@@ -574,14 +537,12 @@ private fun SwipeableConversationRow(
                 OtpConversationCard(
                     item = item,
                     code = otpCode,
-                    simColor = simColor,
                     simLabel = simLabel,
                     onClick = onClick,
                 )
             } else {
                 ConversationCard(
                     item = item,
-                    simColor = simColor,
                     simLabel = simLabel,
                     onClick = onClick,
                 )
@@ -601,13 +562,12 @@ private fun swipeActionIcon(action: SwipeAction): ImageVector = when (action) {
 @Composable
 private fun ConversationCard(
     item: ConversationItem,
-    simColor: Color?,
     simLabel: String?,
     onClick: () -> Unit,
 ) {
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = RadiantSurfaceLow),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -622,54 +582,29 @@ private fun ConversationCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Avatar circulaire 48dp avec initiales.
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(RadiantPrimary.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    initialsOf(item.displayName),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = RadiantPrimary,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+            // Avatar uniforme partage (lot 1) : cercle neutre, initiales.
+            TindaAvatar(displayName = item.displayName.ifBlank { item.address })
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         item.displayName.ifBlank { item.address },
                         style = MaterialTheme.typography.bodyLarge,
-                        color = RadiantText,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = if (item.unreadCount > 0) FontWeight.Bold else FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    if (simColor != null) {
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 6.dp)
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(simColor),
-                        )
-                    }
                 }
                 if (simLabel != null) {
-                    Text(
-                        simLabel,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = RadiantTextTertiary,
-                        maxLines = 1,
-                    )
+                    // Badge SIM neutre et explicite : le libellé porte
+                    // l'information, jamais une couleur par SIM.
+                    SimBadge(label = simLabel, modifier = Modifier.padding(top = 2.dp))
                 }
                 Text(
                     item.snippet,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = RadiantTextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -681,35 +616,36 @@ private fun ConversationCard(
                 Text(
                     TimeFormat.shortDate(item.date, stringResource(R.string.yesterday)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = RadiantPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                 )
                 if (item.unreadCount > 0) {
                     Box(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background(RadiantPrimary),
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             if (item.unreadCount > 99) "99+" else item.unreadCount.toString(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = RadiantOnPrimary,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.Bold,
                         )
                     }
                 }
             }
         }
-        // Liseré coloré de la SIM, centré sur le bord droit de la carte.
-        if (simColor != null) {
+        // Liseré neutre de la SIM, centré sur le bord droit de la
+        // carte (superposé, il n'ajoute aucune hauteur : correctif L4).
+        if (simLabel != null) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .padding(end = 2.dp)
                     .size(width = 3.dp, height = 40.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(simColor),
+                    .background(MaterialTheme.colorScheme.outlineVariant),
             )
         }
         }
@@ -721,14 +657,13 @@ private fun ConversationCard(
 private fun OtpConversationCard(
     item: ConversationItem,
     code: String,
-    simColor: Color?,
     simLabel: String?,
     onClick: () -> Unit,
 ) {
     val clipboard = LocalClipboardManager.current
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = RadiantSurface),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
@@ -742,57 +677,28 @@ private fun OtpConversationCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(RadiantPrimary.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        initialsOf(item.displayName),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = RadiantPrimary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
+                TindaAvatar(displayName = item.displayName.ifBlank { item.address })
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            item.displayName.ifBlank { item.address },
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = RadiantText,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false),
-                        )
-                        if (simColor != null) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(start = 6.dp)
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(simColor),
-                            )
-                        }
-                    }
+                    Text(
+                        item.displayName.ifBlank { item.address },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                     if (simLabel != null) {
-                        Text(
-                            simLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = RadiantTextTertiary,
-                        )
+                        SimBadge(label = simLabel, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = RadiantPrimary.copy(alpha = 0.15f),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                 ) {
                     Text(
                         stringResource(R.string.otp_badge),
                         style = MaterialTheme.typography.labelSmall,
-                        color = RadiantPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
@@ -800,13 +706,13 @@ private fun OtpConversationCard(
                 Text(
                     TimeFormat.shortDate(item.date, stringResource(R.string.yesterday)),
                     style = MaterialTheme.typography.bodySmall,
-                    color = RadiantPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
             Text(
                 item.snippet,
                 style = MaterialTheme.typography.bodyMedium,
-                color = RadiantTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -814,7 +720,7 @@ private fun OtpConversationCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(RadiantBg)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -823,7 +729,7 @@ private fun OtpConversationCard(
                     code,
                     style = MaterialTheme.typography.headlineSmall,
                     fontFamily = FontFamily.Monospace,
-                    color = RadiantText,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 4.sp,
                 )
@@ -835,7 +741,7 @@ private fun OtpConversationCard(
                 ) {
                     Text(
                         stringResource(R.string.copy_code),
-                        color = RadiantPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -859,7 +765,7 @@ private fun SearchResultsList(
             Text(
                 stringResource(R.string.search_no_results, query),
                 style = MaterialTheme.typography.bodyMedium,
-                color = RadiantTextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     } else {
@@ -879,7 +785,7 @@ private fun SearchResultsList(
                             result.displayName,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Bold,
-                            color = RadiantText,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
@@ -887,13 +793,13 @@ private fun SearchResultsList(
                         Text(
                             TimeFormat.shortDate(result.date, stringResource(R.string.yesterday)),
                             style = MaterialTheme.typography.bodySmall,
-                            color = RadiantTextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(
                         parseHighlight(result.snippet),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = RadiantTextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -923,7 +829,7 @@ private fun parseHighlight(snippet: String): AnnotatedString {
             withStyle(
                 SpanStyle(
                     fontWeight = FontWeight.Bold,
-                    color = RadiantPrimary,
+                    color = MaterialTheme.colorScheme.primary,
                 ),
             ) {
                 append(snippet.substring(start + HIGHLIGHT_START.length, end))

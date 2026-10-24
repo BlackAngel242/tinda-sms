@@ -7,6 +7,7 @@ object Routes {
     const val CONVERSATION_DETAIL = "conversation/{threadId}"
     const val NEW_CONVERSATION = "new_conversation"
     const val SETTINGS = "settings"
+    const val AUTOMATIONS = "automations"
     const val BLOCKLIST = "blocklist"
     const val DIAGNOSTIC = "diagnostic"
     const val VAULT_UNLOCK = "vault_unlock"
