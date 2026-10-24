@@ -4,38 +4,53 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /**
- * Revue Codex PR nº 4 : la SIM affichée dans une bulle sortante est
- * celle du message (subscriptionId persisté), jamais celle du
- * compositeur. Une SIM retirée ou inconnue reste explicite.
+ * Revue Codex PR nº 4 : le badge d'une bulle sortante lit
+ * l'emplacement conservé au moment de l'envoi, pas l'emplacement
+ * actuel de la carte. L'ancien code résolvait le subscriptionId
+ * dans la correspondance actuelle : une carte déplacée réécrivait
+ * l'historique de ses anciens messages.
  */
 class MessageSimTest {
 
-    private val slots = mapOf(11 to 0, 22 to 1)
-
     @Test
-    fun firstSlot_isSim1() {
-        assertEquals(MessageSim.Known(1), messageSimFor(11, slots))
+    fun persistedFirstSlot_isSim1() {
+        assertEquals(MessageSim.Known(1), messageSimFor(simSlot = 0))
     }
 
     @Test
-    fun secondSlot_isSim2() {
-        assertEquals(MessageSim.Known(2), messageSimFor(22, slots))
+    fun persistedSecondSlot_isSim2() {
+        assertEquals(MessageSim.Known(2), messageSimFor(simSlot = 1))
     }
 
     @Test
-    fun missingSubscription_isUnknown() {
-        // SIM retirée ou remplacée depuis l'envoi : aucun slot inventé.
-        assertEquals(MessageSim.Unknown, messageSimFor(99, slots))
+    fun simMovedToOtherSlot_oldMessageKeepsItsHistoricalSlot() {
+        // La carte utilisée pour ce message était dans le logement 1
+        // à l'envoi (slot conservé 0). Elle est aujourd'hui dans le
+        // logement 2 : la résolution ne reçoit même plus la
+        // correspondance actuelle, l'historique ne peut pas bouger.
+        val messageSimSlotAtSendTime = 0
+        assertEquals(MessageSim.Known(1), messageSimFor(messageSimSlotAtSendTime))
     }
 
     @Test
-    fun negativeSubscription_isUnknown() {
-        // -1 = identifiant non persisté pour ce message.
-        assertEquals(MessageSim.Unknown, messageSimFor(-1, slots))
+    fun simRemovedAfterSend_persistedSlotStillProvesHistory() {
+        // Carte retirée depuis l'envoi : l'ancien code répondait
+        // Unknown faute de correspondance actuelle. Le slot conservé
+        // continue de prouver l'historique, sans rien inventer.
+        assertEquals(MessageSim.Known(2), messageSimFor(simSlot = 1))
     }
 
     @Test
-    fun noCurrentSim_isUnknown() {
-        assertEquals(MessageSim.Unknown, messageSimFor(11, emptyMap()))
+    fun oldMessageWithoutPersistedSlot_isUnknown() {
+        // Message envoyé avant la conservation du slot (base
+        // version 11 ou avant), ou slot illisible à l'envoi : on
+        // n'attribue pas l'emplacement actuel d'une carte qui a pu
+        // être déplacée ou remplacée depuis.
+        assertEquals(MessageSim.Unknown, messageSimFor(simSlot = null))
+    }
+
+    @Test
+    fun negativePersistedSlot_isUnknown() {
+        assertEquals(MessageSim.Unknown, messageSimFor(simSlot = -1))
     }
 }

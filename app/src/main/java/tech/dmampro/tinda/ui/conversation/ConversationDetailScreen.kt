@@ -230,12 +230,14 @@ fun ConversationDetailScreen(
                         } else {
                             MessageBubble(
                                 message = message,
-                                // SIM historique du message (subscriptionId
-                                // persisté), pas celle du compositeur.
+                                // SIM historique du message : emplacement
+                                // conservé au moment de l'envoi, jamais
+                                // déduit de l'emplacement actuel de la
+                                // carte, et pas celle du compositeur.
                                 messageSim = if (message.incoming) {
                                     null
                                 } else {
-                                    messageSimFor(message.subscriptionId, slotBySubId)
+                                    messageSimFor(message.simSlot)
                                 },
                                 onFailedClick = { failedMessage = it },
                             )

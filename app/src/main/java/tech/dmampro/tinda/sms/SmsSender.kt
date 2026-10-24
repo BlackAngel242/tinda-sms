@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Telephony
 import android.telephony.SmsManager
+import android.telephony.SubscriptionManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -54,6 +55,21 @@ class SmsSender @Inject constructor(
         val smsManager = smsManagerFor(subscriptionId)
         val parts = smsManager.divideMessage(body)
 
+        // Emplacement de la SIM à cet instant précis, conservé avec
+        // le message : si la carte change de logement plus tard,
+        // l'historique de ce message reste vrai. Illisible (permission
+        // ou carte absente) = null, donc « SIM inconnue », jamais une
+        // valeur déduite après coup.
+        val simSlot = runCatching {
+            if (subscriptionId >= 0) {
+                context.getSystemService(SubscriptionManager::class.java)
+                    ?.getActiveSubscriptionInfo(subscriptionId)
+                    ?.simSlotIndex
+            } else {
+                null
+            }
+        }.getOrNull()
+
         // 1. Ligne locale immédiate (l'UI affiche "envoi en cours").
         val rowId = db.messageDao().insert(
             Message(
@@ -66,6 +82,7 @@ class SmsSender @Inject constructor(
                 status = MessageStatus.SENDING,
                 token = token,
                 subscriptionId = subscriptionId,
+                simSlot = simSlot,
             ),
         )
         repository.notifyChanged()

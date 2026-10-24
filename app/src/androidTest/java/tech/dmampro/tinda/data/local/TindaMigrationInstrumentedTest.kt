@@ -11,11 +11,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Migration Room réelle de la version 10 vers la version 11.
+ * Migrations Room réelles vérifiées une à une (10 vers 11, puis
+ * 11 vers 12).
  *
- * Les schémas 10 et 11 sont les seuls exportés dans app/schemas :
- * ce test ne prétend donc pas valider les migrations 3 vers 10.
- * Il exige un appareil ou un émulateur et est exécuté par la CI.
+ * Les schémas exportés dans app/schemas couvrent les versions 10,
+ * 11 et 12 : ces tests ne prétendent donc pas valider les migrations
+ * 3 vers 10. Ils exigent un appareil ou un émulateur et sont
+ * exécutés par la CI.
  */
 @RunWith(AndroidJUnit4::class)
 class TindaMigrationInstrumentedTest {
@@ -63,6 +65,41 @@ class TindaMigrationInstrumentedTest {
         ).use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals("message_parts", cursor.getString(0))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate11To12AddsSimSlotAndKeepsItNullForOldMessages() {
+        val databaseName = "tinda-migration-11-12"
+        helper.createDatabase(databaseName, 11).apply {
+            execSQL(
+                "INSERT INTO messages " +
+                    "(id, threadId, address, body, date, read, incoming, status, " +
+                    "subscriptionId, simulated) " +
+                    "VALUES (5, 3, 'TEST', 'Ancien message sans slot conserve', " +
+                    "123456, 1, 0, 'SENT', 2, 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            databaseName,
+            12,
+            true,
+            MIGRATION_11_12,
+        )
+
+        // L'ancien message survit, et son emplacement historique
+        // reste NULL : la migration ne déduit rien de l'emplacement
+        // actuel de sa carte.
+        migrated.query(
+            "SELECT body, subscriptionId, simSlot FROM messages WHERE id = 5",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Ancien message sans slot conserve", cursor.getString(0))
+            assertEquals(2, cursor.getInt(1))
+            assertTrue(cursor.isNull(2))
         }
         migrated.close()
     }
