@@ -50,6 +50,12 @@ jobs:
       - name: Run unit tests, lint and the debug build
         run: ./gradlew testDebugUnitTest lintDebug assembleDebug
 
+      # En cas d'échec, le rapport lint texte part dans le journal du
+      # job : la console Gradle ne montre que la première erreur.
+      - name: Show the lint text report when checks fail
+        if: failure()
+        run: cat app/build/reports/lint-results-debug.txt || true
+
   instrumented:
     name: Room instrumented tests
     runs-on: ubuntu-latest
