@@ -21,3 +21,7 @@ Conventions pour tout agent travaillant sur ce dépôt.
 - Respecter le PRD (`~/workspace/your_files/prd-tinda-sms.md`) : décisions DEC-001 à DEC-010, règles RB-01 à RB-06.
 - `android:exported` toujours explicite sur chaque composant (obligatoire API 31+).
 - Toute fonction « sensible » (coffre, faux SMS, bouclier) repasse par la lentille sécurité avant d'entrer dans un lot.
+- Pour un défaut de revue : reproduire ou prouver le comportement, corriger la cause, puis ajouter un test qui échouait avant et passe après lorsque le comportement est testable.
+- Chaque PR contient une courte leçon : ce qui était faux, pourquoi, la correction et le réflexe de vérification à garder.
+- Présenter chaque PR en langage courant : problème vécu, avant, après, bénéfice, vérifications réellement exécutées et limites.
+- Avant de planifier une feature, lire `docs/design/PARCOURS-PERSONAS-WORKFLOW.md` ; chaque PR indique le parcours utilisateur amélioré et la preuve qui valide le changement. Mettre le graphe à jour si l'état du projet évolue.
