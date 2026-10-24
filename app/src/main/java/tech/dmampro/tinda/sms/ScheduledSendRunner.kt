@@ -62,22 +62,30 @@ class ScheduledSendRunner(
         if (store.claim(id, startedAt) == 0) {
             return Outcome.CLAIM_LOST
         }
-        return try {
+        // Seule la phase avant le retour de send peut finir en FAILED.
+        // Une fois send revenu, le SMS peut être parti, même si Room
+        // ou la résolution du verdict échoue juste après.
+        val result = try {
             val threadId = resolveThreadId(item.address)
-            val result = send(item, threadId)
-            store.attachToken(id, result.token)
-            // Le verdict a pu arriver pendant l'appel : résolution immédiate.
-            resolveByToken(result.token)
-            log("programmé : émission lancée, en attente du verdict")
-            Outcome.LAUNCHED
+            send(item, threadId)
         } catch (e: Exception) {
-            // Écriture conditionnelle : un verdict ou un changement
-            // d'état survenu entre-temps n'est jamais écrasé.
-            if (store.failAttemptIfStillSending(id, startedAt) == 1) {
+            return if (store.failAttemptIfStillSending(id, startedAt) == 1) {
                 Outcome.FAILED_SEND
             } else {
                 Outcome.ALREADY_HANDLED
             }
         }
+        try {
+            store.attachToken(id, result.token)
+            // Un verdict arrivé avant l'association peut déjà attendre.
+            resolveByToken(result.token)
+        } catch (e: Exception) {
+            // Garder SENDING : le balayage le rendra AMBIGUOUS, sans
+            // renvoi automatique. Ne jamais fabriquer un faux FAILED.
+            log("programmé : suivi incomplet après soumission, état incertain")
+            return Outcome.LAUNCHED
+        }
+        log("programmé : émission lancée, en attente du verdict")
+        return Outcome.LAUNCHED
     }
 }
