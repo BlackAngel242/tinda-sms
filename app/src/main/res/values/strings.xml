@@ -87,6 +87,12 @@
     <string name="settings_diagnostic">SMS role diagnostic</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Checks that the phone properly sees Tinda\'s 4 SMS components (the ones Android requires for the default SMS app list). Take a screenshot of the result.</string>
+    <string name="diagnostic_device_title">Device (Build fingerprint)</string>
+    <string name="diagnostic_device_manufacturer">Manufacturer</string>
+    <string name="diagnostic_device_brand">Brand</string>
+    <string name="diagnostic_device_model">Model</string>
+    <string name="diagnostic_device_display">Display</string>
+    <string name="diagnostic_device_incremental">Incremental version</string>
     <string name="diagnostic_loading">Analyzing…</string>
     <string name="diagnostic_all_ok">All green: the phone sees Tinda correctly. If it still doesn\'t show up in the default SMS apps, the block comes from the system.</string>
     <string name="diagnostic_not_ok">A component is missing: the problem comes from the app, not the phone.</string>
