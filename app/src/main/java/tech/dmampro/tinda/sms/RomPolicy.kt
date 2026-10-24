@@ -50,9 +50,11 @@ data class ProvenZeroResultDevice(
 val PROVEN_ZERO_RESULT_DEVICES: List<ProvenZeroResultDevice> = listOf(
     // Empreinte capturée le 24 octobre 2026 via adb sur le Redmi
     // Note 14 de SmokeSama (appareil DrSmoke_RN14, produit tanzanite).
-    // Preuves émission et livraison par observation des accusés sur
-    // cet appareil encore à établir pendant la recette : les deux
-    // drapeaux restent donc à faux.
+    // Recette du 24 octobre 2026 sur cet appareil : envoi réel
+    // observé, accusé d'émission reçu avec resultCode -1 et accusé
+    // de livraison reçu avec resultCode -1, message passé à
+    // DELIVERED dans la base. Aucun accusé à 0 observé sur cette
+    // empreinte exacte : les deux drapeaux restent donc à faux.
     ProvenZeroResultDevice(
         fingerprint = BuildFingerprint(
             manufacturer = "Xiaomi",
