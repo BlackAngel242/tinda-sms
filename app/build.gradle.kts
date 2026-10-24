@@ -106,7 +106,18 @@ android {
             // Prone d'androidx.test à ignorer, voir le fichier.
             testProguardFiles("proguard-rules-test.pro")
         }
+        // Variante réservée aux tests instrumentés : le paquet de
+        // test et l'application doivent garder leurs classes Kotlin
+        // et AndroidX accessibles par réflexion. Le debug utilisé
+        // sur téléphone conserve sa réduction et sa signature.
+        create("ciTest") {
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
+    testBuildType = "ciTest"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
