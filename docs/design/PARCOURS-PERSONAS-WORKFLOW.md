@@ -2,6 +2,8 @@
 
 État de référence : 24 octobre 2026. Ce document est une carte de travail, pas une attestation de recette. Les états des PR et des fonctionnalités doivent être revérifiés sur GitHub avant chaque intervention.
 
+Mise à jour du 24 octobre 2026 : la PR nº 2 est fusionnée dans master (`d4d2921`) après revue Codex ; la PR nº 4 (thèmes, navigation, SIM historique) est redirigée vers master et attend sa revue finale.
+
 Sources : [PRD et décisions](../reference/dossier-muse-2026-10-20.md), [matrice datée du 21 octobre](../validation/matrice-fonctionnalites.md), [plan de reprise](../superpowers/plans/2026-10-20-tinda-reprise-muse.md), [avancement du design](AVANCEMENT-LOT1.md). Les cinq profils ci-dessous correspondent aux regards 2 à 6 du PRD ; ce sont des profils de conception, pas cinq entretiens terrain individuels démontrés.
 
 ## Vue des besoins
@@ -22,9 +24,9 @@ flowchart TB
 
 | Profil et scène | Besoin exprimé | Réponse prévue | Référence | État à confirmer et prochaine preuve |
 |---|---|---|---|---|
-| Novice : ouvre l'app, lit un SMS, répond | Aucun réglage obligatoire, états compréhensibles | Onboarding du rôle SMS, conversation, réponse, mode simple, « livré » seulement si confirmé | US-001, US-012, DEC-008/010, F1/F2/F8 | Parcours codé en partie et vu sur appareil historiquement. Refaire une recette du build actuel, permissions refusées comprises ; vérifier le mode simple réel. |
-| Commerçant : répond vite avec deux SIM ou écrit à un groupe | Éviter la mauvaise SIM et une facture surprise | SIM visible par message, choix avant envoi, attribution par contact, compteur segments × destinataires et confirmation du coût | US-002/008, RB-06, F2/F14 | Les badges SIM et l'attribution existent à des degrés différents ; le compteur groupé et l'alerte restent à livrer. Tester deux SIM réelles et un SMS long. |
-| Expert : choisit un thème et programme un rappel | Personnalisation cohérente et automatisations fiables | Sept thèmes, navigation, programmation, récurrence, gestes et modèles | US-003/004, F4/F5/F9/F16 | PR 4 ouverte et non vue sur appareil ; programmation unique partielle, récurrence et alarmes exactes absentes dans la matrice. Vérifier la persistance après redémarrage. |
+| Novice : ouvre l'app, lit un SMS, répond | Aucun réglage obligatoire, états compréhensibles | Onboarding du rôle SMS, conversation, réponse, mode simple, « livré » seulement si confirmé | US-001, US-012, DEC-008/010, F1/F2/F8 | Parcours codé en partie et vu sur appareil historiquement. Preuves ajoutées par la PR nº 2 fusionnée : transitions d'envoi testées contre les courses du worker et les pannes après soumission ; une panne après l'appel radio conserve l'état incertain, sans renvoi automatique. Refaire une recette du build actuel, permissions refusées comprises ; vérifier le mode simple réel. |
+| Commerçant : répond vite avec deux SIM ou écrit à un groupe | Éviter la mauvaise SIM et une facture surprise | SIM visible par message, choix avant envoi, attribution par contact, compteur segments × destinataires et confirmation du coût | US-002/008, RB-06, F2/F14 | Le badge SIM affiche l'emplacement conservé au moment de l'envoi (PR nº 4, migration 11 vers 12) : déplacer, retirer ou remplacer la carte ne réécrit plus l'historique, et les anciens messages restent « SIM inconnue ». Testé en JVM (déplacement, retrait, ancien message) ; preuve appareil après migration encore à faire. Le compteur groupé et l'alerte de coût restent à livrer. |
+| Expert : choisit un thème et programme un rappel | Personnalisation cohérente et automatisations fiables | Sept thèmes, navigation, programmation, récurrence, gestes et modèles | US-003/004, F4/F5/F9/F16 | PR nº 4 vue partiellement sur appareil le 24 octobre (accueil, navigation basse à trois onglets, badges SIM) ; captures des sept thèmes, grandes polices et TalkBack restantes. Programmation unique partielle, récurrence et alarmes exactes absentes dans la matrice. Vérifier la persistance après redémarrage. |
 | Professionnel discret : marque un expéditeur privé | Aucun contenu privé dans les listes, la recherche, les notifications ou le fournisseur normal | Coffre chiffré, session UI distincte de la réception de fond, politique de panne et migration | US-005/006, DEC-004/005, RB-01, F12/F13 | Risque de repli vers le fournisseur signalé ; modèle de clés et comportement en panne non tranchés. Décision SmokeSama avant toute promesse nouvelle, puis tests de panne et de conservation. |
 | Personne exposée aux arnaques MoMo : reçoit un SMS suspect | Être avertie sans bloquer un vrai transfert | Bandeau d'avertissement local, jamais de blocage silencieux, liste blanche et mesure des faux positifs | US-007, DEC-006, RB-04, F15 | Prévu, sans moteur validé. Constituer un corpus consenti et anonymisé hors dépôt ; mesurer vrais/faux positifs avant activation. |
 
@@ -76,19 +78,18 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    A["PR 2 : statuts SMS et migrations"] --> B["Tests de comportements et recette appareil"]
-    B --> C["Fusion après revue"]
-    C --> D["PR 4 : thèmes et navigation"]
-    D --> E["Captures Android, accessibilité, revue visuelle"]
-    E --> F["Fusion après revue"]
-    F --> G["PR suivantes par parcours utilisateur"]
+    A["PR 2 : statuts SMS et migrations (fusionnée, d4d2921)"] --> B["Tests de comportements et recette appareil (partielle, faite le 24 octobre)"]
+    B --> C["PR 4 : thèmes, navigation, SIM historique (vers master, en revue)"]
+    C --> D["Captures Android, accessibilité, revue visuelle (à compléter)"]
+    D --> E["Fusion après revue"]
+    E --> F["PR suivantes par parcours utilisateur"]
 ```
 
 | Priorité | Travail | Sortie vérifiable |
 |---|---|---|
-| P0 | PR 2 : limiter l'exception du code SMS `0` aux preuves appareil réelles et empêcher un état refusé par Room d'être inscrit dans le fournisseur | Tests des transitions et résultats de build au SHA final ; aucune réussite inventée |
+| P0 | PR 2 : limiter l'exception du code SMS `0` aux preuves appareil réelles et empêcher un état refusé par Room d'être inscrit dans le fournisseur | Fait, PR nº 2 fusionnée (`d4d2921`) : empreinte Build exacte avec drapeaux indépendants, alignement du fournisseur sur le statut persisté, courses et pannes après soumission testées, CI verte au SHA final (tests JVM, lint, construction debug, tests Room sur la variante ciTest) |
 | P0 | Coffre : trancher le modèle de clés et la panne, séparer réception technique et autorisation UI | Décision explicite, tests de panne, aucune fuite vers le fournisseur/notification/log, migration non destructive |
-| P1 | PR 4 : thèmes, navigation, SIM historique et marges | Captures de vrais écrans, FR/EN, clair/sombre, grandes polices, TalkBack, clavier et deux SIM |
+| P1 | PR 4 : thèmes, navigation, SIM historique et marges | Fait en code et en tests JVM ; vu sur appareil : accueil et navigation (24 octobre). Restent : captures des sept thèmes, FR/EN, clair/sombre, grandes polices, TalkBack, clavier et deux SIM après la migration 11 vers 12 |
 | P1 | Commerçant : coût groupé, attribution SIM et statuts | Calcul visible avant confirmation et essais double SIM/SMS long |
 | P1 | Novice : mode simple, refus du rôle SMS, brouillons et recherche complète | Parcours sans impasse ni affirmation trompeuse sur l'historique recherché |
 | P2 | Expert : récurrence, exactitude horaire, règles et modèles | Redémarrage, restrictions Android et état incertain démontrés |
