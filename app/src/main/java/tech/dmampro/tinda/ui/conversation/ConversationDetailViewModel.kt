@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,6 +61,21 @@ class ConversationDetailViewModel @Inject constructor(
     val messages: StateFlow<List<Message>> =
         repository.observeThreadMessages(threadId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Verdicts des segments par jeton de message, pour afficher les
+     * états en mots (« Livraison non confirmée » quand tous les
+     * verdicts reçus sont non concluants, voir MessageStatusPresentation).
+     */
+    val partsByToken: StateFlow<Map<String, List<tech.dmampro.tinda.sms.PartOutcome>>> =
+        db.messagePartDao().observeForThread(threadId)
+            .map { parts ->
+                parts.groupBy(
+                    keySelector = { it.token },
+                    valueTransform = { tech.dmampro.tinda.sms.PartOutcome(it.sentState, it.delivered) },
+                )
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val _uiState = MutableStateFlow(DetailUiState())
     val uiState: StateFlow<DetailUiState> = _uiState

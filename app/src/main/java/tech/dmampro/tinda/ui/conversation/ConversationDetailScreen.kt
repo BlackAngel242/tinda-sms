@@ -34,10 +34,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
@@ -86,6 +83,7 @@ import tech.dmampro.tinda.data.local.Message
 import tech.dmampro.tinda.data.local.MessageStatus
 import tech.dmampro.tinda.ui.components.MessageSim
 import tech.dmampro.tinda.ui.components.SimBadge
+import tech.dmampro.tinda.ui.components.SimChoiceControl
 import tech.dmampro.tinda.ui.components.messageSimFor
 import tech.dmampro.tinda.ui.schedule.ScheduleDialog
 import tech.dmampro.tinda.util.OtpDetection
@@ -109,6 +107,7 @@ fun ConversationDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val messages by viewModel.messages.collectAsState()
+    val partsByToken by viewModel.partsByToken.collectAsState()
     val draft by viewModel.draftText.collectAsState()
     var failedMessage by remember { mutableStateOf<Message?>(null) }
     var showSchedule by remember { mutableStateOf(false) }
@@ -239,6 +238,8 @@ fun ConversationDetailScreen(
                                 } else {
                                     messageSimFor(message.simSlot)
                                 },
+                                statusParts = message.token?.let { partsByToken[it] }
+                                    ?: emptyList(),
                                 onFailedClick = { failedMessage = it },
                             )
                         }
@@ -288,6 +289,7 @@ private fun DatePill(label: String) {
 private fun MessageBubble(
     message: Message,
     messageSim: MessageSim?,
+    statusParts: List<tech.dmampro.tinda.sms.PartOutcome>,
     onFailedClick: (Message) -> Unit,
 ) {
     val isIncoming = message.incoming
@@ -350,13 +352,17 @@ private fun MessageBubble(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.padding(top = 2.dp, start = 4.dp, end = 4.dp),
         ) {
-            Text(
-                TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline,
-            )
-            if (!isIncoming) {
-                StatusIcon(status = message.status)
+            if (isIncoming) {
+                Text(
+                    TimeFormat.shortDate(message.date, stringResource(R.string.yesterday)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            } else {
+                // État en mots + heure réelle : l'heure affichée est
+                // celle de l'événement nommé (envoi, ou livraison
+                // confirmée si son heure est conservée).
+                StatusLine(message = message, parts = statusParts)
             }
             // SIM historique de CE message, en texte neutre : « SIM 1 »,
             // « SIM 2 », ou « SIM inconnue » si la SIM a été retirée ou
@@ -557,7 +563,7 @@ private fun Composer(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (sims.size > 1) {
-                SimPills(
+                SimChoiceControl(
                     sims = sims,
                     selectedSimId = selectedSimId,
                     onSelect = onSimSelected,
@@ -657,51 +663,6 @@ private fun QuickTemplatesRow(onInsert: (String) -> Unit) {
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-/** Pastilles SIM du compositeur : la sélectionnée est mise en avant. */
-@Composable
-private fun SimPills(
-    sims: List<SimInfo>,
-    selectedSimId: Int,
-    onSelect: (Int) -> Unit,
-) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        sims.forEach { sim ->
-            val selected = sim.subscriptionId == selectedSimId
-            // Pastille neutre : le libellé « 1 Nom » / « 2 Nom » porte
-            // l'information, pas une couleur par SIM.
-            val dotColor = MaterialTheme.colorScheme.onSurfaceVariant
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
-                        RoundedCornerShape(50),
-                    )
-                    .border(
-                        1.dp,
-                        if (selected) dotColor
-                        else MaterialTheme.colorScheme.outlineVariant,
-                        RoundedCornerShape(50),
-                    )
-                    .clickable { onSelect(sim.subscriptionId) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            ) {
-                Box(
-                    Modifier
-                        .size(8.dp)
-                        .background(dotColor, CircleShape),
-                )
-                Text(
-                    "${sim.slotIndex + 1} ${sim.displayName}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -836,38 +797,42 @@ private fun FailureDialog(
     )
 }
 
-/** Icône de statut : envoi, envoyé, livré, échec. Jamais "lu" en SMS pur (RB-05). */
+/**
+ * État d'un message sortant, en mots : « En cours », « Envoyé »,
+ * « Livré », « Échec » ou « Livraison non confirmée », suivi de
+ * l'heure de l'événement nommé. Le mot vient uniquement des états
+ * persistés (voir statusWord) ; jamais de « lu » en SMS pur (RB-05),
+ * jamais de « Livré » déduit d'autre chose que l'accusé confirmé.
+ * L'heure de livraison n'est affichée que si elle a été conservée
+ * au moment de l'accusé (colonne deliveredAt).
+ */
 @Composable
-private fun StatusIcon(status: MessageStatus) {
-    val (icon, tint, description) = when (status) {
-        MessageStatus.SENDING -> Triple(
-            Icons.Filled.Schedule,
-            MaterialTheme.colorScheme.outline,
-            R.string.status_sending,
-        )
-        MessageStatus.SENT -> Triple(
-            Icons.Filled.Check,
-            MaterialTheme.colorScheme.outline,
-            R.string.status_sent,
-        )
-        MessageStatus.DELIVERED -> Triple(
-            Icons.Filled.DoneAll,
-            MaterialTheme.colorScheme.primary,
-            R.string.status_delivered,
-        )
-        MessageStatus.FAILED -> Triple(
-            Icons.Filled.ErrorOutline,
-            MaterialTheme.colorScheme.error,
-            R.string.status_failed,
-        )
-        MessageStatus.RECEIVED -> return
+private fun StatusLine(
+    message: Message,
+    parts: List<tech.dmampro.tinda.sms.PartOutcome>,
+) {
+    val word = statusWord(message.status, parts) ?: return
+    val (labelRes, color) = when (word) {
+        StatusWord.EN_COURS ->
+            R.string.status_label_in_progress to MaterialTheme.colorScheme.outline
+        StatusWord.ENVOYE ->
+            R.string.status_label_sent to MaterialTheme.colorScheme.outline
+        StatusWord.LIVRE ->
+            R.string.status_label_delivered to MaterialTheme.colorScheme.primary
+        StatusWord.ECHEC ->
+            R.string.status_label_failed to MaterialTheme.colorScheme.error
+        StatusWord.NON_CONFIRME ->
+            R.string.status_label_unconfirmed to MaterialTheme.colorScheme.outline
     }
-    Icon(
-        icon,
-        contentDescription = stringResource(description),
-        tint = tint,
-        modifier = Modifier
-            .padding(start = 4.dp)
-            .size(14.dp),
+    val shownTime = if (word == StatusWord.LIVRE && message.deliveredAt != null) {
+        message.deliveredAt
+    } else {
+        message.date
+    }
+    Text(
+        "${stringResource(labelRes)} · " +
+            TimeFormat.shortDate(shownTime, stringResource(R.string.yesterday)),
+        style = MaterialTheme.typography.labelSmall,
+        color = color,
     )
 }
