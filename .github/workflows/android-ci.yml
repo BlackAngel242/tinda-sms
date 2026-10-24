@@ -2,9 +2,17 @@ name: Android CI
 
 on:
   pull_request:
+  # Push limité à master : un push de branche de PR est déjà couvert
+  # par l'événement pull_request, l'ancien déclencheur sur toutes les
+  # branches exécutait chaque vérification deux fois.
   push:
     branches:
-      - "**"
+      - master
+
+# Un nouveau push sur la même référence annule l'exécution dépassée.
+concurrency:
+  group: android-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -24,7 +32,7 @@ jobs:
           java-version: "21"
 
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.3
 
       - name: Install Android 36 and its build tools
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
@@ -56,7 +64,7 @@ jobs:
           java-version: "21"
 
       - name: Set up the Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.3
 
       - name: Install Android 36 and its build tools
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"

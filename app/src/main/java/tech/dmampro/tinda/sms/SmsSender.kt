@@ -78,44 +78,73 @@ class SmsSender @Inject constructor(
             },
         )
 
-        try {
-            // 2. Appel radio (lève une exception en cas d'échec immédiat).
-            if (parts.size <= 1) {
-                smsManager.sendTextMessage(
-                    address, null, body,
-                    statusIntent(ACTION_SMS_SENT, token, 0),
-                    if (deliveryReport) statusIntent(ACTION_SMS_DELIVERED, token, 0) else null,
-                )
-            } else {
-                val sent = ArrayList<PendingIntent>(parts.size)
-                val delivered = ArrayList<PendingIntent>(parts.size)
-                parts.forEachIndexed { index, _ ->
-                    sent.add(statusIntent(ACTION_SMS_SENT, token, index))
-                    if (deliveryReport) delivered.add(statusIntent(ACTION_SMS_DELIVERED, token, index))
+        // 2 et 3. Appel radio, puis écriture dans le provider Sent.
+        // La frontière compte (voir SendFlow) : une exception de
+        // l'appel radio vaut échec de soumission ; une exception
+        // après son retour (écriture fournisseur, association du
+        // providerId) ne prouve pas que le SMS n'est pas parti. Dans
+        // ce second cas, le message reste SENDING jusqu'à l'accusé ou
+        // à la réconciliation, et rien ne propose de renvoi.
+        val outcome = SendFlow.execute(
+            submitToRadio = {
+                if (parts.size <= 1) {
+                    smsManager.sendTextMessage(
+                        address, null, body,
+                        statusIntent(ACTION_SMS_SENT, token, 0),
+                        if (deliveryReport) {
+                            statusIntent(ACTION_SMS_DELIVERED, token, 0)
+                        } else {
+                            null
+                        },
+                    )
+                } else {
+                    val sent = ArrayList<PendingIntent>(parts.size)
+                    val delivered = ArrayList<PendingIntent>(parts.size)
+                    parts.forEachIndexed { index, _ ->
+                        sent.add(statusIntent(ACTION_SMS_SENT, token, index))
+                        if (deliveryReport) {
+                            delivered.add(statusIntent(ACTION_SMS_DELIVERED, token, index))
+                        }
+                    }
+                    smsManager.sendMultipartTextMessage(
+                        address, null, parts, sent,
+                        delivered.takeIf { deliveryReport },
+                    )
                 }
-                smsManager.sendMultipartTextMessage(
-                    address, null, parts, sent,
-                    delivered.takeIf { deliveryReport },
+            },
+            writeToProvider = {
+                val providerId = writeToSentProvider(address, body, subscriptionId)
+                SendJournal.log("send() : provider Sent id=$providerId")
+                providerId?.let { db.messageDao().updateProviderId(rowId, it) }
+                providerId
+            },
+            onProviderFailure = { e ->
+                TindaLogger.e(TAG, "échec après l'appel radio", e)
+                SendJournal.log(
+                    "send() : écriture fournisseur en échec après l'appel radio, " +
+                        "état laissé en attente des accusés",
                 )
+            },
+        )
+        when (outcome) {
+            is SendFlow.Outcome.RadioFailed -> {
+                val e = outcome.error
+                TindaLogger.e(TAG, "exception pendant l'appel radio", e)
+                SendJournal.log("send() : EXCEPTION radio ${e.javaClass.simpleName}")
+                // La synchronisation du dépôt protège un accusé déjà
+                // persisté en terminal et aligne le fournisseur sur
+                // l'état réellement conservé, même pour cette exception.
+                repository.updateMessageStatus(
+                    token, MessageStatus.FAILED, FAILURE_EXCEPTION
+                )
+                throw e
             }
 
-            // 3. Écriture dans le provider Sent (rôle default handler).
-            val providerId = writeToSentProvider(address, body, subscriptionId)
-            SendJournal.log("send() : provider Sent id=$providerId")
-            providerId?.let { db.messageDao().updateProviderId(rowId, it) }
-        } catch (e: Exception) {
-            TindaLogger.e(TAG, "exception pendant l'envoi", e)
-            SendJournal.log("send() : EXCEPTION ${e.javaClass.simpleName}")
-            // La synchronisation du dépôt protège un accusé déjà
-            // persisté en terminal et aligne le fournisseur sur
-            // l'état réellement conservé, même pour cette exception.
-            repository.updateMessageStatus(
-                token, MessageStatus.FAILED, FAILURE_EXCEPTION
-            )
-            throw e
+            is SendFlow.Outcome.Submitted -> {
+                SendJournal.log("send() : appel radio OK, en attente des accusés")
+                SendResult(token, parts.size)
+            }
         }
-        SendJournal.log("send() : appel radio OK, en attente des accusés")
-        SendResult(token, parts.size)
     }
 
     private fun smsManagerFor(subscriptionId: Int): SmsManager =
@@ -193,9 +222,10 @@ class SmsSender @Inject constructor(
         const val EXTRA_TOKEN = "token"
         const val EXTRA_PART_INDEX = "part_index"
         /**
-         * failureCode stocké quand l'envoi échoue par exception dans
-         * l'application (avant ou après l'appel radio), distinct des
-         * resultCode radio (1 à 4).
+         * failureCode stocké quand l'appel radio lui-même échoue par
+         * exception, distinct des resultCode radio (1 à 4). Un échec
+         * après l'appel radio ne reçoit pas ce code : il ne marque
+         * pas FAILED (voir SendFlow).
          */
         const val FAILURE_EXCEPTION = -1
         private val requestCodeCounter = AtomicInteger(0)

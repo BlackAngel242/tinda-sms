@@ -502,8 +502,37 @@ interface ScheduledMessageDao {
     )
     suspend fun claim(id: Long, startedAt: Long): Int
 
-    @Query("UPDATE scheduled_messages SET attemptToken = :token WHERE id = :id")
-    suspend fun attachToken(id: Long, token: String)
+    @Query(
+        "UPDATE scheduled_messages SET attemptToken = :token " +
+            "WHERE id = :id AND status IN ('SENDING', 'AMBIGUOUS')",
+    )
+    suspend fun attachToken(id: Long, token: String): Int
+
+    /**
+     * Échec pour perte du rôle SMS, conditionné à l'état relu par le
+     * worker : ne transitionne (1 ligne) que si la demande est encore
+     * PENDING. Une annulation arrivée entre la lecture et cette
+     * écriture laisse donc la ligne CANCELLED intacte (0 ligne).
+     */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'FAILED' " +
+            "WHERE id = :id AND status = 'PENDING'",
+    )
+    suspend fun failIfPending(id: Long): Int
+
+    /**
+     * Échec d'une tentative après exception, conditionné à l'identité
+     * de la tentative prise par le worker (même id, même début, encore
+     * SENDING). Si un verdict a entre-temps résolu la ligne (SENT ou
+     * FAILED par jeton) ou si le balayage l'a passée AMBIGUOUS, cette
+     * écriture touche 0 ligne et ne peut pas écraser cet état.
+     */
+    @Query(
+        "UPDATE scheduled_messages SET status = 'FAILED' " +
+            "WHERE id = :id AND status = 'SENDING' " +
+            "AND attemptStartedAt = :startedAt",
+    )
+    suspend fun failAttemptIfStillSending(id: Long, startedAt: Long): Int
 
     /**
      * Résolution par le verdict du message tenté : SENT ou FAILED (L3).
