@@ -93,7 +93,14 @@ fun AutoDeleteScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { creating = true }) {
+            // Même style que le bouton d'écriture de la liste :
+            // primaire plein, jamais le conteneur pâle par défaut
+            // (harmonisation, brief terrain du 24 octobre).
+            FloatingActionButton(
+                onClick = { creating = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
             }
         },

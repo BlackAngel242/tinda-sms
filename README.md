@@ -1,6 +1,6 @@
 # Tinda SMS
 
-Nouvelle application SMS Android, 100 % originale — **DMAM PRO TECH**.
+Nouvelle application SMS Android, 100 % originale : **DMAM PRO TECH**.
 SMS uniquement (pas de MMS). Min Android 8.0 (API 26), cible Android 16 (API 36).
 
 > Spec complète : [docs/reference/prd-tinda-sms.md](docs/reference/prd-tinda-sms.md) (table ronde, décisions DEC-001 à DEC-010).
@@ -62,7 +62,7 @@ app/src/main/java/tech/dmampro/tinda/
 - Jamais de contenu SMS ni de numéro dans les logs ou les commits.
 - Tout ce qui touche au coffre-fort ou aux faux SMS ne va **jamais** dans le provider système (RB-01 / RB-03 du PRD).
 
-## Tests terrain (lot 1) — checklist pour SmokeSama
+## Tests terrain (lot 1) : checklist pour SmokeSama
 
 Pas d'appareil réel dans l'environnement de build : ces vérifications se font
 sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
@@ -83,7 +83,7 @@ sur un vrai téléphone (ROM Tecno / Infinix / Itel recommandée).
 8. **Message long** : envoyer un texte de 200 caractères ; vérifier le
    compteur « 2 segments » et la bonne réception en un seul SMS.
 
-## Tests terrain (lot 2) — checklist pour SmokeSama
+## Tests terrain (lot 2) : checklist pour SmokeSama
 
 1. **Recherche** : taper un mot dans la barre de recherche ; vérifier les
    résultats avec passages surlignés ; ouvrir un résultat (bon fil affiché).

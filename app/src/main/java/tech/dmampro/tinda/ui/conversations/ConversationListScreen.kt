@@ -8,6 +8,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -287,6 +288,13 @@ fun ConversationListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
+                        // Marge basse : la dernière carte (dont le
+                        // bouton « Copier » des codes) doit pouvoir
+                        // défiler entièrement au-dessus du bouton
+                        // d'écriture, qui la recouvrait (brief
+                        // terrain du 24 octobre). 56 bouton + 16
+                        // marge + 16 d'air.
+                        contentPadding = PaddingValues(bottom = 88.dp),
                     ) {
                         items(conversations, key = { it.threadId }) { item ->
                             SwipeableConversationRow(
@@ -769,7 +777,12 @@ private fun SearchResultsList(
             )
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            // Même marge basse que la liste principale : le dernier
+            // résultat ne doit pas rester sous le bouton d'écriture.
+            contentPadding = PaddingValues(bottom = 88.dp),
+        ) {
             items(results, key = { it.threadId to it.date }) { result ->
                 Column(
                     modifier = Modifier

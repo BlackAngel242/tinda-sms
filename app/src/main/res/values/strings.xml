@@ -276,15 +276,15 @@
     <string name="settings_section_automation">Automation &amp; rules</string>
     <string name="settings_section_security">Security &amp; privacy</string>
     <string name="settings_dualsim_title">Dual SIM &amp; Smart Routing</string>
-    <string name="settings_dualsim_subtitle" formatted="false">100% SMS engine, offline</string>
+    <string name="settings_dualsim_subtitle" formatted="false">Sent counts per SIM card</string>
     <string name="settings_sim_label">SIM %1$d</string>
     <string name="settings_advanced_desc">Gestures, diagnostics, archived</string>
     <string name="settings_diagnostic_desc">Check the SMS role and sending</string>
     <string name="settings_version">Tinda SMS v%1$s</string>
-    <string name="settings_ondevice">Encrypted &amp; stored on-device</string>
+    <string name="settings_ondevice">Stored on-device · Encrypted vault</string>
     <string name="stats_sms">SMS messages</string>
     <string name="stats_blocked">Blocked</string>
-    <string name="stats_delivery">GSM delivery</string>
+    <string name="stats_delivery">Confirmed delivered</string>
     <string name="stats_sim_sent">%1$d SMS sent</string>
     <string name="filter_otp">2FA Codes</string>
     <string name="favorite_toggle">Toggle favorite</string>

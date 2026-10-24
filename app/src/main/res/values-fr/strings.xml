@@ -276,15 +276,15 @@
     <string name="settings_section_automation">Automatisation &amp; règles</string>
     <string name="settings_section_security">Sécurité &amp; confidentialité</string>
     <string name="settings_dualsim_title">Double SIM &amp; Routage Intelligent</string>
-    <string name="settings_dualsim_subtitle" formatted="false">Moteur 100% SMS hors-ligne actif</string>
+    <string name="settings_dualsim_subtitle" formatted="false">Envois comptés par carte SIM</string>
     <string name="settings_sim_label">SIM %1$d</string>
     <string name="settings_advanced_desc">Gestes, diagnostic, archivés</string>
     <string name="settings_diagnostic_desc">Vérifier le rôle SMS et l\'envoi</string>
     <string name="settings_version">Tinda SMS v%1$s</string>
-    <string name="settings_ondevice">Chiffré &amp; stocké sur l\'appareil</string>
+    <string name="settings_ondevice">Stocké sur l\'appareil · Coffre chiffré</string>
     <string name="stats_sms">Messages SMS</string>
     <string name="stats_blocked">Bloqués</string>
-    <string name="stats_delivery">Délivrance GSM</string>
+    <string name="stats_delivery">Livrés confirmés</string>
     <string name="stats_sim_sent">%1$d SMS envoyés</string>
     <string name="filter_otp">Codes 2FA</string>
     <string name="favorite_toggle">Ajouter aux favoris</string>

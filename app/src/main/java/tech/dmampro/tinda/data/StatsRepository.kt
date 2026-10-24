@@ -22,12 +22,19 @@ class StatsRepository @Inject constructor(
     /** Nombre de numéros bloqués. */
     suspend fun blockedCount(): Int = blockDao.countAll()
 
-    /** Taux de délivrance : délivrés / envoyés (0..100). */
-    suspend fun deliveryRate(): Int {
+    /**
+     * Part des envois dont la livraison est CONFIRMÉE par un accusé
+     * reçu : délivrés / (émis + délivrés + échoués), en pourcentage.
+     * Ce n'est pas un taux de délivrance réseau : sans accusé, un
+     * SMS peut très bien être arrivé. Null quand aucun envoi n'est
+     * compté : afficher « 100 % » sur une base vide serait inventer
+     * un score (brief terrain du 24 octobre).
+     */
+    suspend fun deliveryRate(): Int? {
         val sent = messageDao.countByStatus(MessageStatus.SENT) +
             messageDao.countByStatus(MessageStatus.DELIVERED) +
             messageDao.countByStatus(MessageStatus.FAILED)
-        if (sent == 0) return 100
+        if (sent == 0) return null
         val delivered = messageDao.countByStatus(MessageStatus.DELIVERED)
         return (delivered * 100 / sent).coerceIn(0, 100)
     }

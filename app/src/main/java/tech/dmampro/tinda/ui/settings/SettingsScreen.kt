@@ -571,7 +571,9 @@ private fun StatsRow(stats: SmsStats) {
             label = stringResource(R.string.stats_blocked),
         )
         StatItem(
-            value = "${stats.deliveryRate}%",
+            // Sans aucun envoi compté, aucun pourcentage : un tiret,
+            // pas un score inventé.
+            value = stats.deliveryRate?.let { "$it%" } ?: "—",
             label = stringResource(R.string.stats_delivery),
         )
     }
