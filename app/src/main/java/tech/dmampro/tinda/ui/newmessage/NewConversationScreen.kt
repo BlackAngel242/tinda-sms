@@ -7,6 +7,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -349,6 +352,8 @@ fun NewConversationScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             // Espacement resserré : fini l'espace mort entre les blocs.
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -358,7 +363,14 @@ fun NewConversationScreen(
                 value = uiState.recipient,
                 onValueChange = { viewModel.onRecipientChange(it) },
                 label = { Text(stringResource(R.string.recipient_hint)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                // Clavier texte : le champ cherche des contacts, il doit
+                // permettre de taper des lettres (nom) comme des chiffres.
+                // Le clavier téléphone d'avant rendait la recherche par
+                // nom impossible (constat de recette du 24 octobre).
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Text,
+                    capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.None,
+                ),
                 singleLine = true,
                 isError = uiState.addressError,
                 supportingText = {
@@ -387,11 +399,10 @@ fun NewConversationScreen(
                 },
             )
             // SIM du prochain envoi : contrôle compact à choix explicites.
+            // Le libellé passe au-dessus du contrôle : côte à côte, le nom
+            // de la deuxième SIM était rogné (constat de recette du 24 octobre).
             if (uiState.sims.size > 1) {
-                Row(
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         stringResource(R.string.sim_choose),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -461,7 +472,7 @@ private fun RecipientSuggestions(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 240.dp),
+                    .heightIn(max = 200.dp),
             ) {
                 items(suggestions, key = { "${it.contactId}:${it.number}" }) { suggestion ->
                     val description = "${suggestion.displayName}, ${suggestion.number}"
