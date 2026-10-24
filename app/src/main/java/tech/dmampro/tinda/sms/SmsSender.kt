@@ -106,12 +106,12 @@ class SmsSender @Inject constructor(
         } catch (e: Exception) {
             TindaLogger.e(TAG, "exception pendant l'envoi", e)
             SendJournal.log("send() : EXCEPTION ${e.javaClass.simpleName}")
-            // Conditionnel : un accusé déjà persisté en terminal ne
-            // doit pas être écrasé par ce chemin d'exception tardif.
-            db.messageDao().updateStatusAndFailureByTokenIfNotTerminal(
+            // La synchronisation du dépôt protège un accusé déjà
+            // persisté en terminal et aligne le fournisseur sur
+            // l'état réellement conservé, même pour cette exception.
+            repository.updateMessageStatus(
                 token, MessageStatus.FAILED, FAILURE_EXCEPTION
             )
-            repository.notifyChanged()
             throw e
         }
         SendJournal.log("send() : appel radio OK, en attente des accusés")

@@ -95,6 +95,12 @@
     <string name="settings_diagnostic">Diagnostic du rôle SMS</string>
     <string name="diagnostic_title">Diagnostic</string>
     <string name="diagnostic_desc">Vérifie que le téléphone voit bien les 4 composants SMS de Tinda (ceux qu\'Android exige pour la liste des applis SMS par défaut). Faites une capture d\'écran du résultat.</string>
+    <string name="diagnostic_device_title">Appareil (empreinte Build)</string>
+    <string name="diagnostic_device_manufacturer">Fabricant</string>
+    <string name="diagnostic_device_brand">Marque</string>
+    <string name="diagnostic_device_model">Modèle</string>
+    <string name="diagnostic_device_display">Affichage</string>
+    <string name="diagnostic_device_incremental">Version incrémentale</string>
     <string name="diagnostic_loading">Analyse en cours…</string>
     <string name="diagnostic_all_ok">Tout est vert : le téléphone voit correctement Tinda. Si elle n\'apparaît toujours pas dans les applis SMS par défaut, le blocage vient du système.</string>
     <string name="diagnostic_not_ok">Un composant est introuvable : le problème vient de l\'application, pas du téléphone.</string>

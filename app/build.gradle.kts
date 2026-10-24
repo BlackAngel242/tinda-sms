@@ -20,6 +20,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // 4 ABI -> 2 : x86/x86_64 ne servent qu'aux émulateurs. -10 Mo d'APK,
         // crucial pour les connexions lentes (testeur sous réseau faible).
         ndk {
@@ -96,12 +97,19 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets {
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Schémas Room exportés et versionnés (P0-5) : app/schemas/.
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+// MigrationTestHelper lit les schémas exportés depuis les assets du
+// test instrumenté : voir le sourceSets androidTest dans android {}.
 
 dependencies {
     val bom = platform(libs.androidx.compose.bom)
@@ -130,4 +138,10 @@ dependencies {
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)
+
+    // Uniquement pour les tests instrumentés exécutés par la CI ou
+    // sur appareil ; ces artefacts ne sont pas requis par l'app.
+    androidTestImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.androidx.test.ext.junit)
 }

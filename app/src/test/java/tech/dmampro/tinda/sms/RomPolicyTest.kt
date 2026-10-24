@@ -1,122 +1,158 @@
 package tech.dmampro.tinda.sms
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Politique ROM du resultCode 0 : seuls les appareils prouvés sur le
- * terrain le 18 octobre 2026 acceptent 0 comme confirmation, pour
- * l'émission comme pour la livraison (revue PR nº 2, point 4).
+ * Politique du resultCode 0 : une famille d'appareils n'est pas une
+ * preuve. Seule une empreinte Build complète, exactement égale à une
+ * entrée documentée, peut activer séparément les drapeaux d'émission
+ * et de livraison.
  */
 class RomPolicyTest {
 
+    private val xiaomiFamilyFingerprint = BuildFingerprint(
+        manufacturer = "Xiaomi",
+        brand = "Redmi",
+        model = "Redmi Note 14",
+        display = "HyperOS 2.0",
+        versionIncremental = "OS2.0.201.0.VNCMIXM",
+    )
+
+    private val tecnoFamilyFingerprint = BuildFingerprint(
+        manufacturer = "TECNO",
+        brand = "TECNO",
+        model = "TECNO Spark",
+        display = "HiOS 14.0.0",
+        versionIncremental = "14.0",
+    )
+
+    private val capturedRedmiFingerprint = BuildFingerprint(
+        manufacturer = "Xiaomi",
+        brand = "Redmi",
+        model = "24117RN76G",
+        display = "BP2A.250605.031.A3",
+        versionIncremental = "OS3.0.302.0.WOGMIDC",
+    )
+
     @Test
-    fun `redmi note 14 hyperos est prouve par l affichage`() {
-        assertTrue(
-            isZeroResultCodeProvenRom(
-                manufacturer = "Xiaomi",
-                brand = "Redmi",
-                model = "Redmi Note 14",
-                display = "HyperOS 2.0",
-                versionIncremental = "V816.0.1.0",
-            ),
-        )
+    fun `la famille xiaomi note 14 hyperos ne prouve rien`() {
+        assertNull(provenZeroResultDeviceFor(xiaomiFamilyFingerprint))
+        assertFalse(zeroProvesSentFor(xiaomiFamilyFingerprint))
+        assertFalse(zeroProvesDeliveredFor(xiaomiFamilyFingerprint))
     }
 
     @Test
-    fun `redmi note 14 hyperos est prouve par le prefixe d incremental`() {
-        assertTrue(
-            isZeroResultCodeProvenRom(
-                manufacturer = "Xiaomi",
-                brand = "Redmi",
-                model = "24117RN76G Note 14",
-                display = "AP3A.240905.015",
-                versionIncremental = "OS2.0.201.0.VNCMIXM",
-            ),
-        )
+    fun `la famille tecno hios ne prouve rien`() {
+        assertNull(provenZeroResultDeviceFor(tecnoFamilyFingerprint))
+        assertFalse(zeroProvesSentFor(tecnoFamilyFingerprint))
+        assertFalse(zeroProvesDeliveredFor(tecnoFamilyFingerprint))
     }
 
     @Test
-    fun `tecno hios est prouve`() {
-        assertTrue(
-            isZeroResultCodeProvenRom(
-                manufacturer = "TECNO",
-                brand = "TECNO",
-                model = "TECNO Spark",
-                display = "HiOS 14.0.0",
-                versionIncremental = "14.0",
-            ),
-        )
+    fun `l empreinte redmi capturee est presente mais inactive`() {
+        val device = provenZeroResultDeviceFor(capturedRedmiFingerprint)
+
+        assertEquals(capturedRedmiFingerprint, device?.fingerprint)
+        assertFalse(device?.zeroProvesSent ?: true)
+        assertFalse(device?.zeroProvesDelivered ?: true)
+        assertFalse(zeroProvesSentFor(capturedRedmiFingerprint))
+        assertFalse(zeroProvesDeliveredFor(capturedRedmiFingerprint))
     }
 
     @Test
-    fun `xiaomi autre modele sans preuve est refuse`() {
+    fun `une empreinte quelconque ne prouve rien`() {
+        val arbitrary = BuildFingerprint("Maker", "Brand", "Model", "Display", "Incremental")
+
+        assertNull(provenZeroResultDeviceFor(arbitrary))
+        assertFalse(zeroProvesSentFor(arbitrary))
+        assertFalse(zeroProvesDeliveredFor(arbitrary))
+        assertFalse(zeroProvesSentFor(BuildFingerprint(null, null, null, null, null)))
+    }
+
+    @Test
+    fun `une entree synthetique exacte active seulement le drapeau d emission`() {
+        val fingerprint = BuildFingerprint("A", "B", "C", "D", "E")
+        val devices = listOf(
+            ProvenZeroResultDevice(
+                fingerprint = fingerprint,
+                zeroProvesSent = true,
+                zeroProvesDelivered = false,
+            ),
+        )
+
+        assertTrue(zeroProvesSentFor(fingerprint, devices))
+        assertFalse(zeroProvesDeliveredFor(fingerprint, devices))
+    }
+
+    @Test
+    fun `une entree synthetique exacte active seulement le drapeau de livraison`() {
+        val fingerprint = BuildFingerprint("A", "B", "C", "D", "E")
+        val devices = listOf(
+            ProvenZeroResultDevice(
+                fingerprint = fingerprint,
+                zeroProvesSent = false,
+                zeroProvesDelivered = true,
+            ),
+        )
+
+        assertFalse(zeroProvesSentFor(fingerprint, devices))
+        assertTrue(zeroProvesDeliveredFor(fingerprint, devices))
+    }
+
+    @Test
+    fun `un seul champ different suffit a refuser une entree synthetique`() {
+        val fingerprint = BuildFingerprint("A", "B", "C", "D", "E")
+        val devices = listOf(
+            ProvenZeroResultDevice(
+                fingerprint = fingerprint,
+                zeroProvesSent = true,
+                zeroProvesDelivered = true,
+            ),
+        )
+        val variants = listOf(
+            fingerprint.copy(manufacturer = "A2"),
+            fingerprint.copy(brand = "B2"),
+            fingerprint.copy(model = "C2"),
+            fingerprint.copy(display = "D2"),
+            fingerprint.copy(versionIncremental = "E2"),
+            fingerprint.copy(manufacturer = null),
+        )
+
+        variants.forEach { variant ->
+            assertNull(provenZeroResultDeviceFor(variant, devices))
+            assertFalse(zeroProvesSentFor(variant, devices))
+            assertFalse(zeroProvesDeliveredFor(variant, devices))
+        }
+    }
+
+    @Test
+    fun `le code zero non prouve reste non confirme a l emission et a la livraison`() {
+        assertEquals(
+            PartSentState.UNCONFIRMED,
+            sentVerdictForResultCode(
+                0,
+                zeroProvesSentForExactDevice = zeroProvesSentFor(capturedRedmiFingerprint),
+            ).first,
+        )
         assertFalse(
-            isZeroResultCodeProvenRom(
-                manufacturer = "Xiaomi",
-                brand = "Redmi",
-                model = "Redmi 13C",
-                display = "HyperOS 1.0",
-                versionIncremental = "OS1.0.1.0",
-            ),
-        )
-        assertFalse(
-            isZeroResultCodeProvenRom(
-                manufacturer = "Xiaomi",
-                brand = "Xiaomi",
-                model = "Xiaomi 14",
-                display = "HyperOS 2.0",
-                versionIncremental = "OS2.0.1.0",
+            isDeliveryConfirmed(
+                0,
+                zeroProvesDelivered = zeroProvesDeliveredFor(capturedRedmiFingerprint),
             ),
         )
     }
 
     @Test
-    fun `redmi note 14 sans indication hyperos est refuse`() {
-        assertFalse(
-            isZeroResultCodeProvenRom(
-                manufacturer = "Xiaomi",
-                brand = "Redmi",
-                model = "Redmi Note 14",
-                display = "MIUI 14.0.3",
-                versionIncremental = "V816.0.1.0",
-            ),
+    fun `le code ok confirme l emission et la livraison sans derogation`() {
+        assertEquals(
+            PartSentState.CONFIRMED,
+            sentVerdictForResultCode(-1, zeroProvesSentForExactDevice = false).first,
         )
-    }
-
-    @Test
-    fun `tecno sans indication hios est refuse`() {
-        assertFalse(
-            isZeroResultCodeProvenRom(
-                manufacturer = "TECNO",
-                brand = "TECNO",
-                model = "TECNO Spark",
-                display = "Android 14",
-                versionIncremental = "14.0",
-            ),
-        )
-    }
-
-    @Test
-    fun `autres fabricants sont refuses`() {
-        assertFalse(
-            isZeroResultCodeProvenRom(
-                manufacturer = "samsung",
-                brand = "samsung",
-                model = "Galaxy Note 14",
-                display = "HyperOS like",
-                versionIncremental = "OS2.0",
-            ),
-        )
-        assertFalse(isZeroResultCodeProvenRom(null, null, null, null, null))
-    }
-
-    @Test
-    fun `livraison confirmee seulement par ok ou zero sur rom prouvee`() {
-        assertTrue(isDeliveryConfirmed(-1, zeroMeansConfirmedOnThisRom = false))
-        assertTrue(isDeliveryConfirmed(0, zeroMeansConfirmedOnThisRom = true))
-        assertFalse(isDeliveryConfirmed(0, zeroMeansConfirmedOnThisRom = false))
-        assertFalse(isDeliveryConfirmed(1, zeroMeansConfirmedOnThisRom = true))
+        assertTrue(isDeliveryConfirmed(-1, zeroProvesDelivered = false))
+        assertFalse(isDeliveryConfirmed(1, zeroProvesDelivered = true))
     }
 }

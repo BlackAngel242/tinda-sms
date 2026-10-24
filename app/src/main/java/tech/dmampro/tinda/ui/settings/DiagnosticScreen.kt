@@ -1,5 +1,6 @@
 package tech.dmampro.tinda.ui.settings
 
+import android.os.Build
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -82,6 +83,23 @@ fun DiagnosticScreen(onBack: () -> Unit) {
             Text(
                 stringResource(R.string.diagnostic_desc),
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.diagnostic_device_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                listOf(
+                    "${stringResource(R.string.diagnostic_device_manufacturer)} : ${Build.MANUFACTURER}",
+                    "${stringResource(R.string.diagnostic_device_brand)} : ${Build.BRAND}",
+                    "${stringResource(R.string.diagnostic_device_model)} : ${Build.MODEL}",
+                    "${stringResource(R.string.diagnostic_device_display)} : ${Build.DISPLAY}",
+                    "${stringResource(R.string.diagnostic_device_incremental)} : ${Build.VERSION.INCREMENTAL}",
+                ).joinToString(separator = "\n"),
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(16.dp))

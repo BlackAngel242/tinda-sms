@@ -36,23 +36,22 @@ data class PartOutcome(
  * Traduit un resultCode radio d'accusé d'émission en verdict de segment.
  *
  * - `-1` (Activity.RESULT_OK) : confirmé.
- * - `0` (Activity.RESULT_CANCELED) : observé sur le terrain le
- *   18 octobre 2026 pour des envois réellement partis, sur deux
- *   appareils prouvés : Redmi Note 14 (HyperOS, fabricant Xiaomi)
- *   et Tecno sous HiOS. Sur ces seules ROM (voir RomPolicy), il vaut
- *   confirmation. Partout ailleurs, ce code ne prouve ni succès ni
- *   échec : le segment reste non confirmé (hypothèse HYP-03 du PRD).
+ * - `0` (Activity.RESULT_CANCELED) : il ne vaut confirmation que
+ *   si le drapeau d'émission d'une empreinte Build exacte a été
+ *   prouvé (voir RomPolicy). À ce jour, aucun drapeau n'est actif :
+ *   ce code ne prouve donc ni succès ni échec et le segment reste
+ *   non confirmé (hypothèse HYP-03 du PRD).
  * - tout autre code : échec documenté, conservé pour le diagnostic.
  *   La documentation Android expose des erreurs au-delà de 1 à 4 ;
  *   aucun code inconnu n'est ignoré.
  */
 fun sentVerdictForResultCode(
     resultCode: Int,
-    zeroMeansSentOnThisRom: Boolean,
+    zeroProvesSentForExactDevice: Boolean,
 ): Pair<PartSentState, Int?> = when {
     resultCode == -1 -> PartSentState.CONFIRMED to null
     resultCode == 0 ->
-        if (zeroMeansSentOnThisRom) {
+        if (zeroProvesSentForExactDevice) {
             PartSentState.CONFIRMED to null
         } else {
             PartSentState.UNCONFIRMED to null

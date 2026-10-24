@@ -25,11 +25,10 @@ import tech.dmampro.tinda.util.TindaLogger
  * [resultCode] est capturé pendant [onReceive], avant tout traitement
  * asynchrone : sa valeur n'est garantie qu'à cet instant.
  *
- * Sur les deux appareils prouvés le 18 octobre 2026 (Redmi Note 14
- * sous HyperOS et Tecno sous HiOS), le système renvoie 0 alors que le
- * SMS est réellement parti ; partout ailleurs, 0 reste non concluant,
- * pour l'émission comme pour la livraison. Voir [RomPolicy] et
- * [sentVerdictForResultCode].
+ * Le code 0 reste non concluant tant qu'une empreinte Build exacte
+ * n'a pas séparément prouvé sa signification à l'émission et à la
+ * livraison. La seule empreinte capturée à ce jour a ses deux
+ * drapeaux à faux. Voir [RomPolicy] et [sentVerdictForResultCode].
  */
 class SmsStatusReceiver : BroadcastReceiver() {
 
@@ -52,18 +51,20 @@ class SmsStatusReceiver : BroadcastReceiver() {
                     context.applicationContext,
                     ReceiverEntryPoint::class.java,
                 ).smsRepository()
-                val zeroProven = isZeroResultCodeProvenRom(
+                val fingerprint = BuildFingerprint(
                     manufacturer = Build.MANUFACTURER,
                     brand = Build.BRAND,
                     model = Build.MODEL,
                     display = Build.DISPLAY,
                     versionIncremental = Build.VERSION.INCREMENTAL,
                 )
+                val provenDevice = provenZeroResultDeviceFor(fingerprint)
                 when (intent.action) {
                     SmsSender.ACTION_SMS_SENT -> {
                         val (state, failureCode) = sentVerdictForResultCode(
                             rc,
-                            zeroMeansSentOnThisRom = zeroProven,
+                            zeroProvesSentForExactDevice =
+                                provenDevice?.zeroProvesSent == true,
                         )
                         repository.recordPartSent(token, partIndex, state, failureCode)
                         SendJournal.log(
@@ -71,9 +72,15 @@ class SmsStatusReceiver : BroadcastReceiver() {
                         )
                     }
                     SmsSender.ACTION_SMS_DELIVERED -> {
-                        // Même politique que l'émission : le code 0 ne
-                        // vaut livraison que sur une ROM prouvée.
-                        if (isDeliveryConfirmed(rc, zeroProven)) {
+                        // Politique distincte de l'émission : le code 0
+                        // ne vaut livraison que si ce drapeau précis a
+                        // été prouvé pour cette empreinte exacte.
+                        if (
+                            isDeliveryConfirmed(
+                                rc,
+                                provenDevice?.zeroProvesDelivered == true,
+                            )
+                        ) {
                             repository.recordPartDelivered(token, partIndex)
                             SendJournal.log(
                                 "accusé livraison segment $partIndex (resultCode=$rc)",
