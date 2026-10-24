@@ -109,6 +109,48 @@ class ScheduledAndMessageDaoInstrumentedTest {
     }
 
     @Test
+    fun roleLossFailureDoesNotOverwriteCancellation() = runBlocking {
+        val dao = db.scheduledMessageDao()
+        val id = insertScheduled()
+
+        // Entrelacement « annulation puis perte du rôle » : le worker
+        // a lu PENDING, l'utilisateur annule, puis le worker tente
+        // d'écrire FAILED. L'écriture conditionnelle touche 0 ligne.
+        assertEquals(1, dao.cancelIfPending(id))
+        assertEquals(0, dao.failIfPending(id))
+        assertEquals(ScheduledStatus.CANCELLED, dao.getById(id)?.status)
+
+        // Sans annulation concurrente, la même écriture passe.
+        val otherId = insertScheduled()
+        assertEquals(1, dao.failIfPending(otherId))
+        assertEquals(ScheduledStatus.FAILED, dao.getById(otherId)?.status)
+    }
+
+    @Test
+    fun attemptFailureDoesNotOverwriteVerdictOrDifferentAttempt() = runBlocking {
+        val dao = db.scheduledMessageDao()
+        val id = insertScheduled()
+        assertEquals(1, dao.claim(id, startedAt = 6_000L))
+        dao.attachToken(id, "verdict-token")
+
+        // Entrelacement « verdict puis exception » : le verdict a
+        // résolu la ligne, le catch du worker ne peut plus la passer
+        // FAILED, même avec la bonne identité de tentative.
+        assertEquals(1, dao.resolveByToken("verdict-token", ScheduledStatus.SENT))
+        assertEquals(0, dao.failAttemptIfStillSending(id, startedAt = 6_000L))
+        assertEquals(ScheduledStatus.SENT, dao.getById(id)?.status)
+
+        // Une tentative différente (autre début) ne peut pas non plus
+        // être écrasée par l'échec de l'ancienne.
+        val otherId = insertScheduled()
+        assertEquals(1, dao.claim(otherId, startedAt = 7_000L))
+        assertEquals(0, dao.failAttemptIfStillSending(otherId, startedAt = 6_999L))
+        assertEquals(ScheduledStatus.SENDING, dao.getById(otherId)?.status)
+        assertEquals(1, dao.failAttemptIfStillSending(otherId, startedAt = 7_000L))
+        assertEquals(ScheduledStatus.FAILED, dao.getById(otherId)?.status)
+    }
+
+    @Test
     fun messageTerminalStatesCannotRegressAtDaoLevel() = runBlocking {
         val dao = db.messageDao()
         dao.insert(
