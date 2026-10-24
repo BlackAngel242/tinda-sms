@@ -52,6 +52,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -112,6 +113,17 @@ fun ConversationDetailScreen(
     var failedMessage by remember { mutableStateOf<Message?>(null) }
     var showSchedule by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    // Horloge d'affichage : le mot d'état dépend du délai écoulé
+    // depuis l'envoi (livraison non confirmée après une heure sans
+    // accusé). Elle se rafraîchit toutes les 30 secondes pour qu'un
+    // fil ouvert bascule tout seul au dépassement du délai.
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            nowMillis = System.currentTimeMillis()
+        }
+    }
     val locale = Locale.getDefault()
     val todayLabel = stringResource(R.string.day_today)
 
@@ -240,6 +252,7 @@ fun ConversationDetailScreen(
                                 },
                                 statusParts = message.token?.let { partsByToken[it] }
                                     ?: emptyList(),
+                                nowMillis = nowMillis,
                                 onFailedClick = { failedMessage = it },
                             )
                         }
@@ -290,6 +303,7 @@ private fun MessageBubble(
     message: Message,
     messageSim: MessageSim?,
     statusParts: List<tech.dmampro.tinda.sms.PartOutcome>,
+    nowMillis: Long,
     onFailedClick: (Message) -> Unit,
 ) {
     val isIncoming = message.incoming
@@ -362,7 +376,7 @@ private fun MessageBubble(
                 // État en mots + heure réelle : l'heure affichée est
                 // celle de l'événement nommé (envoi, ou livraison
                 // confirmée si son heure est conservée).
-                StatusLine(message = message, parts = statusParts)
+                StatusLine(message = message, parts = statusParts, nowMillis = nowMillis)
             }
             // SIM historique de CE message, en texte neutre : « SIM 1 »,
             // « SIM 2 », ou « SIM inconnue » si la SIM a été retirée ou
@@ -804,14 +818,18 @@ private fun FailureDialog(
  * persistés (voir statusWord) ; jamais de « lu » en SMS pur (RB-05),
  * jamais de « Livré » déduit d'autre chose que l'accusé confirmé.
  * L'heure de livraison n'est affichée que si elle a été conservée
- * au moment de l'accusé (colonne deliveredAt).
+ * au moment de l'accusé (colonne deliveredAt) ; sinon, et pour
+ * « Livraison non confirmée », l'heure affichée est celle de
+ * l'envoi : le mot dit ce qui est su, l'heure dit quand le message
+ * est parti.
  */
 @Composable
 private fun StatusLine(
     message: Message,
     parts: List<tech.dmampro.tinda.sms.PartOutcome>,
+    nowMillis: Long,
 ) {
-    val word = statusWord(message.status, parts) ?: return
+    val word = statusWord(message.status, parts, message.date, nowMillis) ?: return
     val (labelRes, color) = when (word) {
         StatusWord.EN_COURS ->
             R.string.status_label_in_progress to MaterialTheme.colorScheme.outline
