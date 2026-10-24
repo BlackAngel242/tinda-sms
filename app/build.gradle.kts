@@ -48,19 +48,31 @@ android {
     // pas aux redémarrages de la machine (clé perdue le 19 oct. 2026 ->
     // INSTALL_FAILED_UPDATE_INCOMPATIBLE). Clé versionnée hors git dans
     // keystore/, mots de passe dans keystore.properties (gitignoré).
+    //
+    // La signature permanente n'est appliquée que si la clé est
+    // réellement présente sur la machine (poste de SmokeSama et cette
+    // machine de développement). En CI, la clé permanente ne doit
+    // jamais être publiée : repli sur la signature debug standard
+    // d'AGP, générée sur le runner et jetable. La signature installée
+    // sur le téléphone ne change donc pas.
     val keystoreProps = Properties()
     val keystorePropsFile = rootProject.file("keystore.properties")
     if (keystorePropsFile.exists()) {
         keystorePropsFile.inputStream().use { keystoreProps.load(it) }
     }
+    val permanentStoreFile = rootProject.file(
+        keystoreProps.getProperty("storeFile", "keystore/tinda-debug.keystore"),
+    )
+    val permanentKeystorePresent =
+        keystorePropsFile.exists() && permanentStoreFile.exists()
     signingConfigs {
-        create("tindaDebug") {
-            storeFile = rootProject.file(
-                keystoreProps.getProperty("storeFile", "keystore/tinda-debug.keystore"),
-            )
-            storePassword = keystoreProps.getProperty("storePassword", "")
-            keyAlias = keystoreProps.getProperty("keyAlias", "tinda-debug")
-            keyPassword = keystoreProps.getProperty("keyPassword", "")
+        if (permanentKeystorePresent) {
+            create("tindaDebug") {
+                storeFile = permanentStoreFile
+                storePassword = keystoreProps.getProperty("storePassword", "")
+                keyAlias = keystoreProps.getProperty("keyAlias", "tinda-debug")
+                keyPassword = keystoreProps.getProperty("keyPassword", "")
+            }
         }
     }
 
@@ -74,7 +86,12 @@ android {
         }
         debug {
             applicationIdSuffix = ".debug"
-            signingConfig = signingConfigs.getByName("tindaDebug")
+            signingConfig = if (permanentKeystorePresent) {
+                signingConfigs.getByName("tindaDebug")
+            } else {
+                // CI : signature debug standard d'AGP (clé du runner).
+                signingConfigs.getByName("debug")
+            }
             // Minification aussi en debug : l'APK passe de ~32 Mo à ~15 Mo,
             // téléchargeable sur connexion lente. R8 full mode : Hilt, Room
             // et Compose fournissent leurs règles via leurs AAR.
