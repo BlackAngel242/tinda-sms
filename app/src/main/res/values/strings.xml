@@ -16,6 +16,16 @@
     <string name="status_sent">Sent</string>
     <string name="status_delivered">Delivered</string>
     <string name="status_failed">Send failed</string>
+    <string name="status_label_in_progress">In progress</string>
+    <string name="status_label_sent">Sent</string>
+    <string name="status_label_delivered">Delivered</string>
+    <string name="status_label_failed">Failed</string>
+    <string name="status_label_unconfirmed">Delivery unconfirmed</string>
+    <string name="sim_choice_label">SIM %1$d · %2$s</string>
+    <string name="contacts_no_result">No contact found for "%1$s". You can type the number manually.</string>
+    <string name="contacts_permission_denied">Contacts access denied. Manual entry only.</string>
+    <string name="contacts_allow">Allow</string>
+    <string name="contacts_no_number">This contact has no phone number.</string>
     <string name="send_fail_title">Why this message failed</string>
     <string name="send_fail_unknown">Unknown cause. The SMS may still have been sent: check with the recipient before resending.</string>
     <string name="send_fail_app">Internal app error during sending (code -1). The SMS may still have been sent: check with the recipient before resending.</string>
