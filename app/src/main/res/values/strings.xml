@@ -266,7 +266,7 @@
     <string name="settings_section_automation">Automation &amp; rules</string>
     <string name="settings_section_security">Security &amp; privacy</string>
     <string name="settings_dualsim_title">Dual SIM &amp; Smart Routing</string>
-    <string name="settings_dualsim_subtitle">100% SMS engine, offline</string>
+    <string name="settings_dualsim_subtitle" formatted="false">100% SMS engine, offline</string>
     <string name="settings_sim_label">SIM %1$d</string>
     <string name="settings_advanced_desc">Gestures, diagnostics, archived</string>
     <string name="settings_diagnostic_desc">Check the SMS role and sending</string>

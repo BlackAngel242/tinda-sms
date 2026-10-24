@@ -134,9 +134,16 @@ class VaultRepository @Inject constructor(
         if (!isSetup()) return false
         val bm = context.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
             ?: return false
-        val r = bm.canAuthenticate(
-            android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG,
-        )
+        // canAuthenticate(authenticators) et BIOMETRIC_STRONG sont API 30 ;
+        // en API 29, l'appel sans argument couvre le même contrôle.
+        val r = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            bm.canAuthenticate(
+                android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG,
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            bm.canAuthenticate()
+        }
         return r == android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS
     }
 
