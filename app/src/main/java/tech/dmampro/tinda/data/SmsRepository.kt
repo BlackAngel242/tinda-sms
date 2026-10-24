@@ -61,6 +61,57 @@ class SmsRepository @Inject constructor(
      */
     private val statusMutex = Mutex()
 
+    /**
+     * Synchronisation testable des transitions de statut : Room est
+     * la source de vérité et le fournisseur reçoit uniquement le
+     * statut relui après la tentative d'écriture conditionnelle.
+     */
+    private val messageStatusSync = MessageStatusSync(
+        localStore = object : LocalMessageStatusStore {
+            override suspend fun find(token: String): StoredMessageStatus? =
+                db.messageDao().findByToken(token)?.let { message ->
+                    StoredMessageStatus(
+                        status = message.status,
+                        providerId = message.providerId,
+                        failureCode = message.failureCode,
+                    )
+                }
+
+            override suspend fun tryTransition(
+                token: String,
+                status: MessageStatus,
+                failureCode: Int?,
+            ): Int = db.messageDao().updateStatusAndFailureByTokenIfNotTerminal(
+                token,
+                status,
+                failureCode,
+            )
+        },
+        providerWriter = object : ProviderMessageStatusWriter {
+            override suspend fun write(providerId: Long, status: MessageStatus) {
+                try {
+                    val values = ContentValues().apply {
+                        put(
+                            Telephony.Sms.STATUS,
+                            when (status) {
+                                MessageStatus.DELIVERED, MessageStatus.SENT ->
+                                    Telephony.Sms.STATUS_COMPLETE
+                                MessageStatus.FAILED -> Telephony.Sms.STATUS_FAILED
+                                else -> Telephony.Sms.STATUS_NONE
+                            },
+                        )
+                    }
+                    context.contentResolver.update(
+                        Telephony.Sms.CONTENT_URI, values,
+                        "${Telephony.Sms._ID} = ?", arrayOf(providerId.toString()),
+                    )
+                } catch (e: SecurityException) {
+                    TindaLogger.w(TAG, "updateMessageStatus sans permission d'écriture SMS")
+                }
+            }
+        },
+    )
+
     /** Vrai si Tinda est l'application SMS par défaut du système. */
     fun isDefaultSmsApp(): Boolean =
         tech.dmampro.tinda.util.isDefaultSmsApp(context)
@@ -292,39 +343,32 @@ class SmsRepository @Inject constructor(
     /**
      * Met à jour le statut d'un message sortant, avec le code d'échec
      * éventuel (diagnostic visible dans l'app, jamais de contenu ni numéro).
+     *
+     * Point d'entrée externe : il prend le verrou des accusés. Les
+     * chemins déjà sérialisés appellent [updateMessageStatusInternal].
      */
     suspend fun updateMessageStatus(token: String, status: MessageStatus, failureCode: Int?) =
-        withContext(Dispatchers.IO) {
-            // Écriture conditionnelle : un statut terminal déjà persisté
-            // (DELIVERED ou FAILED) n'est jamais écrasé par un écrivain
-            // concurrent porteur d'un calcul plus ancien.
-            db.messageDao().updateStatusAndFailureByTokenIfNotTerminal(token, status, failureCode)
-            // Best effort : reflète aussi le statut dans le provider système.
-            try {
-                val row = db.messageDao().findByToken(token)
-                val providerId = row?.providerId
-                if (providerId != null) {
-                    val values = ContentValues().apply {
-                        put(
-                            Telephony.Sms.STATUS,
-                            when (status) {
-                                MessageStatus.DELIVERED, MessageStatus.SENT ->
-                                    Telephony.Sms.STATUS_COMPLETE
-                                MessageStatus.FAILED -> Telephony.Sms.STATUS_FAILED
-                                else -> Telephony.Sms.STATUS_NONE
-                            },
-                        )
-                    }
-                    context.contentResolver.update(
-                        Telephony.Sms.CONTENT_URI, values,
-                        "${Telephony.Sms._ID} = ?", arrayOf(providerId.toString()),
-                    )
-                }
-            } catch (e: SecurityException) {
-                TindaLogger.w(TAG, "updateMessageStatus sans permission d'écriture SMS")
+        statusMutex.withLock {
+            withContext(Dispatchers.IO) {
+                updateMessageStatusInternal(token, status, failureCode)
             }
-            notifyChanged()
         }
+
+    /**
+     * Transition à appeler uniquement sous [statusMutex].
+     *
+     * [MessageStatusSync] tente l'écriture Room conditionnelle, relit
+     * l'état persisté et aligne le fournisseur sur cet état, y compris
+     * lorsque la transition demandée a été refusée.
+     */
+    private suspend fun updateMessageStatusInternal(
+        token: String,
+        status: MessageStatus,
+        failureCode: Int?,
+    ) {
+        val result = messageStatusSync.update(token, status, failureCode)
+        if (result != MessageStatusSyncResult.NotFound) notifyChanged()
+    }
 
     /**
      * Enregistre le verdict d'émission d'un segment (L3) puis recalcule
@@ -344,9 +388,10 @@ class SmsRepository @Inject constructor(
                 // Repli historique (aucune ligne de segment) : même
                 // protection, l'écriture passe par le DAO conditionnel.
                 when (state) {
-                    PartSentState.CONFIRMED -> updateMessageStatus(token, MessageStatus.SENT)
+                    PartSentState.CONFIRMED ->
+                        updateMessageStatusInternal(token, MessageStatus.SENT, null)
                     PartSentState.FAILED ->
-                        updateMessageStatus(token, MessageStatus.FAILED, failureCode)
+                        updateMessageStatusInternal(token, MessageStatus.FAILED, failureCode)
                     else -> Unit
                 }
                 resolveScheduledInternal(token)
@@ -362,7 +407,7 @@ class SmsRepository @Inject constructor(
             withContext(Dispatchers.IO) {
                 val updated = db.messagePartDao().updateDelivered(token, partIndex)
                 if (updated == 0) {
-                    updateMessageStatus(token, MessageStatus.DELIVERED)
+                    updateMessageStatusInternal(token, MessageStatus.DELIVERED, null)
                     resolveScheduledInternal(token)
                 } else {
                     refreshAggregatedStatus(token)
@@ -385,7 +430,7 @@ class SmsRepository @Inject constructor(
                 } else {
                     null
                 }
-                updateMessageStatus(token, newStatus, failureCode)
+                updateMessageStatusInternal(token, newStatus, failureCode)
             }
         }
         resolveScheduledInternal(token)
