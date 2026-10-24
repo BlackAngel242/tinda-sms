@@ -60,7 +60,11 @@ class SmsSender @Inject constructor(
         // l'historique de ce message reste vrai. Illisible (permission
         // ou carte absente) = null, donc « SIM inconnue », jamais une
         // valeur déduite après coup.
-        val simSlot = runCatching {
+        // try/catch explicite sur SecurityException : la lecture de
+        // l'abonnement exige READ_PHONE_STATE, refusée = slot inconnu.
+        // (runCatching couvrait le même cas, mais lint ne le reconnaît
+        // pas comme une gestion de la permission.)
+        val simSlot = try {
             if (subscriptionId >= 0) {
                 context.getSystemService(SubscriptionManager::class.java)
                     ?.getActiveSubscriptionInfo(subscriptionId)
@@ -68,7 +72,9 @@ class SmsSender @Inject constructor(
             } else {
                 null
             }
-        }.getOrNull()
+        } catch (e: SecurityException) {
+            null
+        }
 
         // 1. Ligne locale immédiate (l'UI affiche "envoi en cours").
         val rowId = db.messageDao().insert(
