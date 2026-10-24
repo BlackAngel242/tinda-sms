@@ -24,6 +24,10 @@
     <!-- Biométrie (déverrouillage du coffre et des réglages avancés) :
          permission normale exigée par BiometricPrompt, sans demande runtime. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Les permissions SMS impliquent la téléphonie aux yeux de lint :
+         déclarée non requise pour ne pas exclure les appareils sans
+         fonction téléphonie des canaux qui n'en dépendent pas. -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
     <!-- Pas de BILLING, pas de RECEIVE_MMS : périmètre SMS uniquement. -->
 
     <application

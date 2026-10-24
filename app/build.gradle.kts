@@ -101,6 +101,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // L'APK de test a sa propre configuration R8 (AGP ne
+            // réutilise pas proguard-rules.pro) : annotations Error
+            // Prone d'androidx.test à ignorer, voir le fichier.
+            testProguardFiles("proguard-rules-test.pro")
         }
     }
 
