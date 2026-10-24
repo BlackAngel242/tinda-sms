@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.Telephony
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -16,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import tech.dmampro.tinda.data.PrefsRepository
+import tech.dmampro.tinda.util.isDefaultSmsApp
 import javax.inject.Inject
 
 /** État d'onboarding : rôle SMS par défaut + autorisations runtime. */
@@ -46,7 +46,7 @@ class OnboardingViewModel @Inject constructor(
     fun refresh() {
         _state.update {
             OnboardingState(
-                isDefaultSmsApp = Telephony.Sms.getDefaultSmsPackage(context) == context.packageName,
+                isDefaultSmsApp = isDefaultSmsApp(context),
                 smsGranted = hasAll(
                     Manifest.permission.READ_SMS,
                     Manifest.permission.SEND_SMS,
