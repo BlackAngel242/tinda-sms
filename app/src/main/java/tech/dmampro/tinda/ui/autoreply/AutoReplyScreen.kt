@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -97,7 +98,14 @@ fun AutoReplyScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { creating = true }) {
+            // Même style que le bouton d'écriture de la liste :
+            // primaire plein, jamais le conteneur pâle par défaut
+            // (harmonisation, brief terrain du 24 octobre).
+            FloatingActionButton(
+                onClick = { creating = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add))
             }
         },
@@ -317,20 +325,24 @@ private fun AutoReplyEditDialog(
                     }
                 }
                 item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                    // Libellé pleine largeur au-dessus des choix : côte à
+                    // côte, les quatre boutons d'heures ne lui laissaient
+                    // que quelques millimètres et il s'affichait lettre
+                    // par lettre (brief terrain du 24 octobre).
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             stringResource(R.string.autoreply_cooldown),
-                            modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        listOf(1, 6, 24, 48).forEach { hours ->
-                            TextButton(
-                                onClick = { cooldown = hours },
-                                enabled = cooldown != hours,
-                            ) { Text("${hours}h") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            listOf(1, 6, 24, 48).forEach { hours ->
+                                TextButton(
+                                    onClick = { cooldown = hours },
+                                    enabled = cooldown != hours,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(horizontal = 0.dp),
+                                ) { Text("${hours}h") }
+                            }
                         }
                     }
                 }
@@ -379,11 +391,21 @@ private fun RowScope.HourPicker(label: String, value: Int, onChange: (Int) -> Un
 @Composable
 private fun DayChips(days: Int, onToggle: (Int) -> Unit) {
     val labels = listOf("D", "L", "M", "M", "J", "V", "S") // dimanche..samedi
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    // Chaque jour reçoit un septième de la largeur : à largeur libre,
+    // les boutons dépassaient la boîte de dialogue et vendredi et
+    // samedi étaient coupés (brief terrain du 24 octobre).
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         labels.forEachIndexed { index, label ->
             val bit = 1 shl index
             val selected = days and bit != 0
-            TextButton(onClick = { onToggle(days xor bit) }) {
+            TextButton(
+                onClick = { onToggle(days xor bit) },
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 0.dp),
+            ) {
                 Text(
                     label,
                     color = if (selected) {

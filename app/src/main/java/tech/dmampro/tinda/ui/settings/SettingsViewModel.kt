@@ -164,6 +164,7 @@ class SettingsViewModel @Inject constructor(
 data class SmsStats(
     val total: Int = 0,
     val blocked: Int = 0,
-    val deliveryRate: Int = 100,
+    /** Part des envois confirmés livrés ; null = aucun envoi compté. */
+    val deliveryRate: Int? = null,
     val perSim: Map<Int, Int> = emptyMap(),
 )

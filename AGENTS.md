@@ -1,4 +1,4 @@
-# AGENTS.md — Tinda SMS
+# AGENTS.md : Tinda SMS
 
 Conventions pour tout agent travaillant sur ce dépôt.
 

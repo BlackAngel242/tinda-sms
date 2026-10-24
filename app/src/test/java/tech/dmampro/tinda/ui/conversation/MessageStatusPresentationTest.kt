@@ -89,4 +89,78 @@ class MessageStatusPresentationTest {
         )
         assertEquals(StatusWord.EN_COURS, statusWord(MessageStatus.SENDING, parts))
     }
+
+    // Délai de confirmation de livraison (brief terrain du 24 octobre :
+    // un SMS sans accusé restait « Envoyé » indéfiniment).
+
+    private val sentAt = 1_000_000_000_000L
+
+    @Test
+    fun `emis confirme recent sans accuse reste Envoye`() {
+        val parts = listOf(PartOutcome(PartSentState.CONFIRMED, delivered = false))
+        val word = statusWord(
+            MessageStatus.SENT, parts,
+            sentAtMillis = sentAt,
+            nowMillis = sentAt + DELIVERY_UNCONFIRMED_AFTER_MS - 1,
+        )
+        assertEquals(StatusWord.ENVOYE, word)
+    }
+
+    @Test
+    fun `emis confirme au dela du delai sans accuse devient Livraison non confirmee`() {
+        val parts = listOf(PartOutcome(PartSentState.CONFIRMED, delivered = false))
+        val word = statusWord(
+            MessageStatus.SENT, parts,
+            sentAtMillis = sentAt,
+            nowMillis = sentAt + DELIVERY_UNCONFIRMED_AFTER_MS,
+        )
+        assertEquals(StatusWord.NON_CONFIRME, word)
+    }
+
+    @Test
+    fun `l accuse tardif apres le delai fait passer a Livre`() {
+        // Transition complète : émis, délai dépassé (non confirmé),
+        // puis l'accusé arrive enfin et le statut persisté devient
+        // DELIVERED. Le mot suit le statut persisté, jamais l'âge.
+        val parts = listOf(PartOutcome(PartSentState.CONFIRMED, delivered = true))
+        val word = statusWord(
+            MessageStatus.DELIVERED, parts,
+            sentAtMillis = sentAt,
+            nowMillis = sentAt + 48L * DELIVERY_UNCONFIRMED_AFTER_MS,
+        )
+        assertEquals(StatusWord.LIVRE, word)
+    }
+
+    @Test
+    fun `un echec reste Echec meme longtemps apres`() {
+        val word = statusWord(
+            MessageStatus.FAILED, emptyList(),
+            sentAtMillis = sentAt,
+            nowMillis = sentAt + 48L * DELIVERY_UNCONFIRMED_AFTER_MS,
+        )
+        assertEquals(StatusWord.ECHEC, word)
+    }
+
+    @Test
+    fun `sans heure d envoi connue aucun delai n est deduit`() {
+        val parts = listOf(PartOutcome(PartSentState.CONFIRMED, delivered = false))
+        val word = statusWord(
+            MessageStatus.SENT, parts,
+            sentAtMillis = null,
+            nowMillis = sentAt + 48L * DELIVERY_UNCONFIRMED_AFTER_MS,
+        )
+        assertEquals(StatusWord.ENVOYE, word)
+    }
+
+    @Test
+    fun `apres redemarrage les memes entrees persistees donnent le meme mot`() {
+        // La dérivation est pure : rien n'est gardé en mémoire, donc
+        // rouvrir l'application ne change ni ne perd l'état affiché.
+        val parts = listOf(PartOutcome(PartSentState.CONFIRMED, delivered = false))
+        val now = sentAt + 2L * DELIVERY_UNCONFIRMED_AFTER_MS
+        val avant = statusWord(MessageStatus.SENT, parts, sentAt, now)
+        val apresRedemarrage = statusWord(MessageStatus.SENT, parts, sentAt, now)
+        assertEquals(StatusWord.NON_CONFIRME, avant)
+        assertEquals(avant, apresRedemarrage)
+    }
 }
