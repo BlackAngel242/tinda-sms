@@ -163,6 +163,50 @@ class ScheduledSendRunnerTest {
     }
 
     @Test
+    fun tokenWriteFailureAfterSubmissionStaysUncertain() = runBlocking {
+        val store = FakeStore(pendingRow())
+        val failingStore = object : ScheduledSendRunner.Store by store {
+            override suspend fun attachToken(id: Long, token: String): Int {
+                throw IllegalStateException("Room indisponible")
+            }
+        }
+        var sendCalls = 0
+        val runner = ScheduledSendRunner(
+            store = failingStore,
+            isDefaultSmsApp = { true },
+            nowMillis = { 2_000L },
+            resolveThreadId = { 99L },
+            send = { _, _ ->
+                sendCalls++
+                SmsSender.SendResult("attempt-token", 1)
+            },
+            resolveByToken = { },
+        )
+
+        assertEquals(ScheduledSendRunner.Outcome.LAUNCHED, runner.run(7L))
+        assertEquals(1, sendCalls)
+        assertEquals(ScheduledStatus.SENDING, store.row.status)
+        assertEquals(null, store.row.attemptToken)
+    }
+
+    @Test
+    fun verdictResolutionFailureAfterSubmissionKeepsTokenAndUncertainty() = runBlocking {
+        val store = FakeStore(pendingRow())
+        val runner = ScheduledSendRunner(
+            store = store,
+            isDefaultSmsApp = { true },
+            nowMillis = { 2_000L },
+            resolveThreadId = { 99L },
+            send = { _, _ -> SmsSender.SendResult("attempt-token", 1) },
+            resolveByToken = { throw IllegalStateException("lecture verdict indisponible") },
+        )
+
+        assertEquals(ScheduledSendRunner.Outcome.LAUNCHED, runner.run(7L))
+        assertEquals(ScheduledStatus.SENDING, store.row.status)
+        assertEquals("attempt-token", store.row.attemptToken)
+    }
+
+    @Test
     fun alreadyHandledRowIsNeverSent() = runBlocking {
         val store = FakeStore(pendingRow().copy(status = ScheduledStatus.SENT))
         var sendCalls = 0
