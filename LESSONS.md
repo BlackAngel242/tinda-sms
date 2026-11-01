@@ -2,6 +2,13 @@
 
 > Toute IA lit ce fichier avant de travailler. Plus récent en haut.
 
+## 2026-11-01 : distinguer maquette, code natif et preuve appareil
+
+- Une maquette HTML peut être valide tout en divergeant de l'APK Android : préciser la source et le commit de chaque conclusion.
+- L'absence de capture Android récente impose la mention « vérification visuelle non effectuée » ; une revue du code ne prouve pas un défaut visible.
+- Deux références documentaires peuvent être en tension (navigation à trois vs quatre onglets). Ne pas choisir silencieusement une refonte contraire au design scellé ; demander un arbitrage produit.
+
+
 ## 2026-10-29 : actions destructives et branches fusionnées en squash
 
 1. **Commande destructive proposée sans vérifier l'état.** Un `git checkout -- .` aurait effacé des modifications non commitées. Règle : `git status` d'abord ; commiter ou sauvegarder, ne jamais écraser.
