@@ -2,7 +2,7 @@
 
 État de référence : 24 octobre 2026. Ce document est une carte de travail, pas une attestation de recette. Les états des PR et des fonctionnalités doivent être revérifiés sur GitHub avant chaque intervention.
 
-Mise à jour du 24 octobre 2026 : la PR nº 2 est fusionnée dans master (`d4d2921`) après revue Codex ; la PR nº 4 (thèmes, navigation, SIM historique) est redirigée vers master et attend sa revue finale.
+Mise à jour du 24 octobre 2026 : PR nº 2 fusionnée (`d4d2921`), PR nº 4 fusionnée (`9ef1765`), PR nº 6 fusionnée (`f86956c`, onboarding aligné sur la vérification du rôle SMS de l'envoi). La recette appareil de la version fusionnée a prouvé la migration 11 vers 12 sur le Redmi (voir journal de recette local). Le parcours SMS quotidien de l'issue nº 7 est en cours de traitement : recherche de contacts dans le champ destinataire, états d'envoi en mots avec heure de livraison conservée (migration 12 vers 13), choix SIM compact.
 
 Sources : [PRD et décisions](../reference/dossier-muse-2026-10-20.md), [matrice datée du 21 octobre](../validation/matrice-fonctionnalites.md), [plan de reprise](../superpowers/plans/2026-10-20-tinda-reprise-muse.md), [avancement du design](AVANCEMENT-LOT1.md). Les cinq profils ci-dessous correspondent aux regards 2 à 6 du PRD ; ce sont des profils de conception, pas cinq entretiens terrain individuels démontrés.
 
@@ -90,6 +90,7 @@ flowchart TB
 | P0 | PR 2 : limiter l'exception du code SMS `0` aux preuves appareil réelles et empêcher un état refusé par Room d'être inscrit dans le fournisseur | Fait, PR nº 2 fusionnée (`d4d2921`) : empreinte Build exacte avec drapeaux indépendants, alignement du fournisseur sur le statut persisté, courses et pannes après soumission testées, CI verte au SHA final (tests JVM, lint, construction debug, tests Room sur la variante ciTest) |
 | P0 | Coffre : trancher le modèle de clés et la panne, séparer réception technique et autorisation UI | Décision explicite, tests de panne, aucune fuite vers le fournisseur/notification/log, migration non destructive |
 | P1 | PR 4 : thèmes, navigation, SIM historique et marges | Fait en code et en tests JVM ; vu sur appareil : accueil et navigation (24 octobre). Restent : captures des sept thèmes, FR/EN, clair/sombre, grandes polices, TalkBack, clavier et deux SIM après la migration 11 vers 12 |
+| P1 | Parcours SMS quotidien (issue nº 7) : rôle SMS diagnostiqué sur l'installation exacte, contacts cherchés pendant la saisie du destinataire, états en mots, SIM compacte | Verdicts des trois sources du rôle relevés sur le Redmi (RoleManager détient le rôle pour le paquet .debug, Settings.Secure à null sur cette ROM) ; recherche de contacts bornée et hors fil UI, résultats obsolètes ignorés, contact sans numéro explicite ; mots d'état déduits des seuls états persistés, heure de livraison posée par l'accusé (migration 12 vers 13 testée) ; contrôle SIM segmenté à deux choix, distinct du badge historique |
 | P1 | Commerçant : coût groupé, attribution SIM et statuts | Calcul visible avant confirmation et essais double SIM/SMS long |
 | P1 | Novice : mode simple, refus du rôle SMS, brouillons et recherche complète | Parcours sans impasse ni affirmation trompeuse sur l'historique recherché |
 | P2 | Expert : récurrence, exactitude horaire, règles et modèles | Redémarrage, restrictions Android et état incertain démontrés |

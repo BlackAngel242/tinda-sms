@@ -12,12 +12,12 @@ import org.junit.runner.RunWith
 
 /**
  * Migrations Room réelles vérifiées une à une (10 vers 11, puis
- * 11 vers 12).
+ * 11 vers 12, puis 12 vers 13).
  *
  * Les schémas exportés dans app/schemas couvrent les versions 10,
- * 11 et 12 : ces tests ne prétendent donc pas valider les migrations
- * 3 vers 10. Ils exigent un appareil ou un émulateur et sont
- * exécutés par la CI.
+ * 11, 12 et 13 : ces tests ne prétendent donc pas valider les
+ * migrations 3 vers 10. Ils exigent un appareil ou un émulateur et
+ * sont exécutés par la CI.
  */
 @RunWith(AndroidJUnit4::class)
 class TindaMigrationInstrumentedTest {
@@ -100,6 +100,42 @@ class TindaMigrationInstrumentedTest {
             assertEquals("Ancien message sans slot conserve", cursor.getString(0))
             assertEquals(2, cursor.getInt(1))
             assertTrue(cursor.isNull(2))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate12To13AddsDeliveredAtAndKeepsItNullForOldMessages() {
+        val databaseName = "tinda-migration-12-13"
+        helper.createDatabase(databaseName, 12).apply {
+            execSQL(
+                "INSERT INTO messages " +
+                    "(id, threadId, address, body, date, read, incoming, status, " +
+                    "subscriptionId, simulated, simSlot) " +
+                    "VALUES (9, 4, 'TEST', 'Message livre sans heure conservee', " +
+                    "123456, 1, 0, 'DELIVERED', 1, 0, 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(
+            databaseName,
+            13,
+            true,
+            MIGRATION_12_13,
+        )
+
+        // Le message survit avec son emplacement historique, et son
+        // heure de livraison reste NULL : la migration ne fabrique pas
+        // une heure que l'accusé n'a jamais établie.
+        migrated.query(
+            "SELECT body, status, simSlot, deliveredAt FROM messages WHERE id = 9",
+        ).use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("Message livre sans heure conservee", cursor.getString(0))
+            assertEquals("DELIVERED", cursor.getString(1))
+            assertEquals(0, cursor.getInt(2))
+            assertTrue(cursor.isNull(3))
         }
         migrated.close()
     }

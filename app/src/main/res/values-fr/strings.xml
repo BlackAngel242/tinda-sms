@@ -16,6 +16,16 @@
     <string name="status_sent">Envoyé</string>
     <string name="status_delivered">Livré</string>
     <string name="status_failed">Échec d\'envoi</string>
+    <string name="status_label_in_progress">En cours</string>
+    <string name="status_label_sent">Envoyé</string>
+    <string name="status_label_delivered">Livré</string>
+    <string name="status_label_failed">Échec</string>
+    <string name="status_label_unconfirmed">Livraison non confirmée</string>
+    <string name="sim_choice_label">SIM %1$d · %2$s</string>
+    <string name="contacts_no_result">Aucun contact trouvé pour « %1$s ». Vous pouvez saisir le numéro à la main.</string>
+    <string name="contacts_permission_denied">Accès aux contacts refusé. Saisie manuelle possible.</string>
+    <string name="contacts_allow">Autoriser</string>
+    <string name="contacts_no_number">Ce contact n\'a pas de numéro de téléphone.</string>
     <string name="send_fail_title">Pourquoi ce message est en échec</string>
     <string name="send_fail_unknown">Cause inconnue. Le SMS a peut-être quand même été envoyé : vérifiez auprès du destinataire avant de renvoyer.</string>
     <string name="send_fail_app">Erreur interne de l\'application pendant l\'envoi (code -1). Le SMS a peut-être quand même été envoyé : vérifiez auprès du destinataire avant de renvoyer.</string>

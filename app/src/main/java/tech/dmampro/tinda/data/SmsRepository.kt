@@ -367,6 +367,18 @@ class SmsRepository @Inject constructor(
         failureCode: Int?,
     ) {
         val result = messageStatusSync.update(token, status, failureCode)
+        // Heure de livraison : posée seulement quand l'état persisté
+        // est DELIVERED par ce chemin d'accusés, une seule fois. Un
+        // message DELIVERED venu du fournisseur ne passe pas ici et ne
+        // reçoit donc pas d'heure fabriquée.
+        val persisted = when (result) {
+            is MessageStatusSyncResult.Applied -> result.persistedStatus
+            is MessageStatusSyncResult.RefusedAligned -> result.persistedStatus
+            MessageStatusSyncResult.NotFound -> null
+        }
+        if (persisted == MessageStatus.DELIVERED) {
+            db.messageDao().stampDeliveredAtIfAbsent(token, System.currentTimeMillis())
+        }
         if (result != MessageStatusSyncResult.NotFound) notifyChanged()
     }
 

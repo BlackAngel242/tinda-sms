@@ -114,6 +114,14 @@ data class Message(
      * contenu ni de numéro.
      */
     val failureCode: Int? = null,
+    /**
+     * Heure de livraison confirmée (version 13) : posée une seule fois,
+     * au moment où l'accusé de livraison fait passer le message à
+     * DELIVERED par le chemin des accusés. Null tant qu'aucun accusé ne
+     * l'a établie : un message DELIVERED venu du fournisseur n'a pas
+     * d'heure de livraison prouvée, on ne la fabrique pas après coup.
+     */
+    val deliveredAt: Long? = null,
 )
 
 /** Brouillon auto (F1) : clé "thread:<id>" ou "new". */
@@ -376,6 +384,18 @@ interface MessageDao {
     @Query("SELECT * FROM messages WHERE token = :token LIMIT 1")
     suspend fun findByToken(token: String): Message?
 
+    /**
+     * Pose l'heure de livraison, une seule fois : seulement si le
+     * message est DELIVERED et qu'aucune heure n'est encore conservée.
+     * Un accusé tardif ou en double ne déplace jamais la première
+     * heure confirmée. Retourne le nombre de lignes modifiées.
+     */
+    @Query(
+        "UPDATE messages SET deliveredAt = :at WHERE token = :token " +
+            "AND status = 'DELIVERED' AND deliveredAt IS NULL",
+    )
+    suspend fun stampDeliveredAtIfAbsent(token: String, at: Long): Int
+
     @Query("DELETE FROM messages WHERE threadId = :threadId")
     suspend fun deleteByThread(threadId: Long)
 
@@ -603,6 +623,14 @@ interface MessagePartDao {
 
     @Query("SELECT * FROM message_parts WHERE token = :token ORDER BY partIndex ASC")
     suspend fun getByToken(token: String): List<MessagePart>
+
+    /** Segments de tous les messages suivis d'un fil, pour l'affichage des états en mots. */
+    @Query(
+        "SELECT * FROM message_parts WHERE token IN " +
+            "(SELECT token FROM messages WHERE threadId = :threadId AND token IS NOT NULL) " +
+            "ORDER BY token ASC, partIndex ASC",
+    )
+    fun observeForThread(threadId: Long): Flow<List<MessagePart>>
 
     @Query(
         "UPDATE message_parts SET sentState = :state, failureCode = :failureCode " +
@@ -844,7 +872,7 @@ fun toFtsMatch(input: String): String {
 }
 
 /** Version courante du schéma (source unique, utilisée par @Database et les tests). */
-const val DATABASE_VERSION = 12
+const val DATABASE_VERSION = 13
 
 @Database(
     entities = [
@@ -1036,8 +1064,20 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
     }
 }
 
+/**
+ * Migration 12 -> 13 : heure de livraison confirmée par l'accusé.
+ * Colonne nullable : les messages déjà livrés n'ont pas d'heure de
+ * livraison conservée, elle reste NULL plutôt que d'être inventée.
+ */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE messages ADD COLUMN deliveredAt INTEGER")
+    }
+}
+
 val ALL_MIGRATIONS: Array<Migration> = arrayOf(
     MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6,
     MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
     MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12,
+    MIGRATION_12_13,
 )

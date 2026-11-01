@@ -57,10 +57,11 @@ class MigrationExecutionTest {
     }
 
     @Test
-    fun `chaque migration emet son sql et la chaine complete en emet 17`() {
+    fun `chaque migration emet son sql et la chaine complete en emet 18`() {
         val sql = runAllMigrations()
-        assertEquals(17, sql.size)
+        assertEquals(18, sql.size)
         assertTrue(sql.any { it.contains("ALTER TABLE messages ADD COLUMN simSlot") })
+        assertTrue(sql.any { it.contains("ALTER TABLE messages ADD COLUMN deliveredAt") })
         assertTrue(sql.any { it.contains("ALTER TABLE messages ADD COLUMN failureCode") })
         assertTrue(sql.any { it.contains("CREATE TABLE IF NOT EXISTS secret_rules") })
         assertTrue(sql.any { it.contains("CREATE TABLE IF NOT EXISTS scheduled_messages") })
@@ -103,6 +104,18 @@ class MigrationExecutionTest {
         assertTrue(v11.contains("attemptStartedAt"))
         assertTrue(v11.contains("allowVerificationCodes"))
         assertTrue(v11.contains("heldVerificationCode"))
+    }
+
+    @Test
+    fun `les schemas exportes 12 et 13 refletent la migration 12 vers 13`() {
+        val dir = locateSchemasDir()
+        val v12 = File(dir, "12.json").readText()
+        val v13 = File(dir, "13.json").readText()
+        assertFalse(v12.contains("deliveredAt"))
+        assertTrue(v13.contains("deliveredAt"))
+        // La colonne historique simSlot reste présente des deux côtés.
+        assertTrue(v12.contains("simSlot"))
+        assertTrue(v13.contains("simSlot"))
     }
 
     private fun locateSchemasDir(): File {
